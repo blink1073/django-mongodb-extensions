@@ -20,6 +20,7 @@ env:
   # to 'false' when the input is set to 'false'.
   DRY_RUN: ${{ ! contains(inputs.dry_run, 'false') }}
   FOLLOWING_VERSION: ${{ inputs.following_version || '' }}
+  VERSION: ${{ github.event_name == 'schedule' && '10.10.10.10' || '' }}
 
 concurrency:
   group: release-${{ github.ref }}
@@ -52,6 +53,8 @@ jobs:
       - uses: mongodb-labs/drivers-github-tools/python-labs/pre-publish@v3
         id: pre-publish
         with:
+          version: ${{ env.VERSION }}
+          version_bump_script: ./.github/scripts/bump-version.sh
           dry_run: ${{ env.DRY_RUN }}
 
   build-dist:
@@ -101,6 +104,8 @@ jobs:
           aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
       - uses: mongodb-labs/drivers-github-tools/python-labs/post-publish@v3
         with:
+          version: ${{ env.VERSION }}
+          version_bump_script: ./.github/scripts/bump-version.sh
           following_version: ${{ env.FOLLOWING_VERSION }}
           product_name: ${{ env.PRODUCT_NAME }}
           token: ${{ github.token }}

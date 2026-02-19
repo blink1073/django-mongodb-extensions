@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-mongodb-extensions"
-version = "0.1.0"
+version = "0.1.0a1"
 description = "Extensions for Django MongoDB Backend"
 readme = "README.md"
 license = { file="LICENSE" }
