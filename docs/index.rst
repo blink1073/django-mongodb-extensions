@@ -8,3 +8,4 @@ Extensions for `Django MongoDB Backend <https://django-mongodb-backend.readthedo
    :maxdepth: 2
 
    mql-panel
+   rest-framework

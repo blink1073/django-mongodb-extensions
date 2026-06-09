@@ -14,7 +14,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "debug_toolbar",
+    "rest_framework",
     "django_mongodb_extensions",
+    "tests.rest_framework_",
 ]
 DATABASES = {
     "default": {
@@ -38,6 +40,7 @@ MIGRATION_MODULES = {
     "auth": None,
     "contenttypes": None,
     "sessions": None,
+    "rest_framework_tests": None,
 }
 # Include MQLPanel for testing
 DEBUG_TOOLBAR_PANELS = [

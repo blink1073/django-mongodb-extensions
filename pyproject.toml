@@ -11,6 +11,14 @@ license = { file="LICENSE" }
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
+mql_panel = [
+    "django-debug-toolbar>=4.0",
+]
+rest_framework = [
+    "djangorestframework>=3.14",
+]
+
+[dependency-groups]
 docs = [
     "furo",
     "sphinx>=7",
@@ -18,7 +26,8 @@ docs = [
 ]
 test = [
     "coverage",
-    "django-debug-toolbar",
+    "django-debug-toolbar>=4.0",
+    "djangorestframework>=3.14",
 ]
 
 [project.urls]
