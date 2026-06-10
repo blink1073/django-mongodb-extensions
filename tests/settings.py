@@ -40,7 +40,7 @@ MIGRATION_MODULES = {
     "auth": None,
     "contenttypes": None,
     "sessions": None,
-    "rest_framework_tests": None,
+    "rest_framework_": None,
 }
 # Include MQLPanel for testing
 DEBUG_TOOLBAR_PANELS = [
