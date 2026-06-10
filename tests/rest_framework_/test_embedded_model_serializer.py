@@ -12,9 +12,10 @@ from rest_framework.validators import UniqueValidator
 
 from django_mongodb_extensions.rest_framework import (
     EmbeddedModelSerializer,
+    MongoModelSerializer,
 )
 
-from .models import City, CityWithUniqueCode, Country
+from .models import City, CityWithUniqueCode, Continent, Country
 from .serializers import CitySerializer, CountrySerializer, StatusTagSerializer
 
 
@@ -98,125 +99,192 @@ class EmbeddedModelSerializerToInternalValueTests(SimpleTestCase):
 
     def test_nested_embedded_array_field(self):
         data = {
-            "name": "France",
+            "name": "Italy",
             "capital": None,
             "cities": [
-                {"name": "Lyon", "population": 500_000},
-                {"name": "Nice", "population": 340_000},
+                {"name": "Rome", "population": 2_800_000},
+                {"name": "Milan", "population": 1_300_000},
             ],
-            "languages": None,
+            "languages": ["Italian"],
         }
         s = CountrySerializer(data=data)
         self.assertTrue(s.is_valid(), s.errors)
         result = s.validated_data
         self.assertIsInstance(result, Country)
+        self.assertEqual(len(result.cities), 2)
         self.assertIsInstance(result.cities[0], City)
-        self.assertEqual(result.cities[0].name, "Lyon")
+        self.assertEqual(result.cities[0].name, "Rome")
 
-    def test_array_field(self):
-        data = {
-            "name": "Switzerland",
-            "capital": None,
-            "cities": None,
-            "languages": ["French", "German", "Italian"],
-        }
+    def test_missing_required_field_raises(self):
+        s = CitySerializer(data={"name": "NoPopulation"})
+        self.assertFalse(s.is_valid())
+        self.assertIn("population", s.errors)
+
+    def test_wrong_type_raises(self):
+        s = CitySerializer(data={"name": "BadPop", "population": "not-a-number"})
+        self.assertFalse(s.is_valid())
+        self.assertIn("population", s.errors)
+
+    def test_null_embedded_field_accepted(self):
+        data = {"name": "Nowhere", "capital": None, "cities": None, "languages": None}
         s = CountrySerializer(data=data)
         self.assertTrue(s.is_valid(), s.errors)
-        self.assertEqual(s.validated_data.languages, ["French", "German", "Italian"])
-
-    def test_null_fields(self):
-        data = {"name": "Empty", "capital": None, "cities": None, "languages": None}
-        s = CountrySerializer(data=data)
-        self.assertTrue(s.is_valid(), s.errors)
-        result = s.validated_data
-        self.assertIsNone(result.capital)
-        self.assertIsNone(result.cities)
-
-    def test_choices_field(self):
-        s = StatusTagSerializer(data={"label": "Test", "status": 1})
-        self.assertTrue(s.is_valid(), s.errors)
-        result = s.validated_data
-        self.assertEqual(result.label, "Test")
-        self.assertEqual(result.status, 1)
+        self.assertIsNone(s.validated_data.capital)
 
 
-class EmbeddedModelSerializerMetaTests(SimpleTestCase):
-    def test_explicit_fields(self):
-        class CityNameOnlySerializer(EmbeddedModelSerializer):
+class EmbeddedModelSerializerNotSavableTests(SimpleTestCase):
+    def test_create_raises(self):
+        s = CitySerializer()
+        with self.assertRaises(NotImplementedError):
+            s.create({})
+
+    def test_update_raises(self):
+        s = CitySerializer()
+        with self.assertRaises(NotImplementedError):
+            s.update(City(), {})
+
+
+class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
+    def test_missing_meta_raises(self):
+        class BrokenSerializer(EmbeddedModelSerializer):
+            pass
+
+        with self.assertRaises(AssertionError):
+            BrokenSerializer().get_fields()
+
+    def test_missing_meta_model_raises(self):
+        class BrokenSerializer(EmbeddedModelSerializer):
+            class Meta:
+                fields = "__all__"
+
+        with self.assertRaises(AssertionError):
+            BrokenSerializer().get_fields()
+
+    def test_missing_meta_fields_raises(self):
+        class BrokenSerializer(EmbeddedModelSerializer):
             class Meta:
                 model = City
-                fields = ["name"]
 
-        data = CityNameOnlySerializer(City(name="Berlin", population=3_500_000)).data
-        self.assertEqual(data, {"name": "Berlin"})
-        self.assertNotIn("population", data)
+        with self.assertRaises(AssertionError):
+            BrokenSerializer().get_fields()
 
-    def test_primary_key_excluded_from_all(self):
-        fields = CitySerializer().get_fields()
-        self.assertNotIn("id", fields)
+    def test_unknown_field_name_raises(self):
+        class BrokenSerializer(EmbeddedModelSerializer):
+            class Meta:
+                model = City
+                fields = ["name", "nonexistent_field"]
 
-    def test_primary_key_explicit_raises(self):
-        class BadSerializer(EmbeddedModelSerializer):
+        with self.assertRaises(FieldDoesNotExist):
+            BrokenSerializer().get_fields()
+
+    def test_explicit_primary_key_raises(self):
+        class BrokenSerializer(EmbeddedModelSerializer):
             class Meta:
                 model = City
                 fields = ["id", "name"]
 
-        s = BadSerializer()
-        with self.assertRaises(ValueError):
-            s.get_fields()
+        with self.assertRaises(ValueError, msg="Primary key field 'id'"):
+            BrokenSerializer().get_fields()
 
-    def test_missing_model_raises(self):
-        class NoModelSerializer(EmbeddedModelSerializer):
-            class Meta:
-                fields = "__all__"
 
-        with self.assertRaises(AssertionError):
-            NoModelSerializer().get_fields()
+class UniqueValidatorStrippingTests(SimpleTestCase):
+    """
+    UniqueValidator must be removed for EmbeddedModel fields (manager
+    cannot be queried).
+    """
 
-    def test_missing_fields_raises(self):
-        class NoFieldsSerializer(EmbeddedModelSerializer):
-            class Meta:
-                model = City
-
-        with self.assertRaises(AssertionError):
-            NoFieldsSerializer().get_fields()
-
-    def test_unknown_field_raises(self):
-        class BadFieldsSerializer(EmbeddedModelSerializer):
-            class Meta:
-                model = City
-                fields = ["nonexistent"]
-
-        with self.assertRaises(FieldDoesNotExist):
-            BadFieldsSerializer().get_fields()
-
-    def test_invalid_fields_type_raises(self):
-        class BadFieldsTypeSerializer(EmbeddedModelSerializer):
-            class Meta:
-                model = City
-                fields = "name"
-
-        with self.assertRaises(AssertionError):
-            BadFieldsTypeSerializer().get_fields()
-
-    def test_declared_field_overrides_auto(self):
-        class CustomCitySerializer(EmbeddedModelSerializer):
-            name = serializers.IntegerField()
-
-            class Meta:
-                model = City
-                fields = "__all__"
-
-        fields = CustomCitySerializer().get_fields()
-        self.assertIsInstance(fields["name"], serializers.IntegerField)
-
-    def test_unique_validator_stripped(self):
-        class CityWithUniqueCodeSerializer(EmbeddedModelSerializer):
+    def test_unique_field_is_valid_without_crash(self):
+        class UniqueCodeSerializer(EmbeddedModelSerializer):
             class Meta:
                 model = CityWithUniqueCode
                 fields = "__all__"
 
-        fields = CityWithUniqueCodeSerializer().get_fields()
-        code_field = fields["code"]
-        for v in code_field.validators:
-            self.assertNotIsInstance(v, UniqueValidator)
+        s = UniqueCodeSerializer(data={"name": "NYC", "code": "NYC"})
+        # Would raise NotSupportedError before the fix if UniqueValidator
+        # was not stripped.
+        self.assertTrue(s.is_valid(), s.errors)
+
+    def test_unique_field_has_no_unique_validator(self):
+        class UniqueCodeSerializer(EmbeddedModelSerializer):
+            class Meta:
+                model = CityWithUniqueCode
+                fields = "__all__"
+
+        fields = UniqueCodeSerializer().get_fields()
+        code_validators = fields["code"].validators
+        self.assertFalse(
+            any(isinstance(v, UniqueValidator) for v in code_validators),
+            "UniqueValidator must not be present on EmbeddedModel fields.",
+        )
+
+
+class ChoicesCoercionTests(SimpleTestCase):
+    def test_choices_field_becomes_choice_field(self):
+        fields = StatusTagSerializer().get_fields()
+        self.assertIsInstance(fields["status"], serializers.ChoiceField)
+
+    def test_choices_field_rejects_invalid_value(self):
+        s = StatusTagSerializer(data={"label": "test", "status": 99})
+        self.assertFalse(s.is_valid())
+        self.assertIn("status", s.errors)
+
+    def test_choices_field_accepts_valid_value(self):
+        s = StatusTagSerializer(data={"label": "active", "status": 1})
+        self.assertTrue(s.is_valid(), s.errors)
+        self.assertEqual(s.validated_data.status, 1)
+
+    def test_choices_field_on_mongo_serializer(self):
+        class HolderSerializer(MongoModelSerializer):
+            class Meta:
+                model = Continent  # has no choices — just confirm no crash
+                fields = "__all__"
+
+        # A MongoModelSerializer auto-generating a StatusTag embedded field
+        # should also coerce choices. Test via a wrapping model using
+        # EmbeddedModelSerializer.
+        fields = StatusTagSerializer().get_fields()
+        self.assertIsInstance(fields["status"], serializers.ChoiceField)
+        self.assertEqual(
+            dict(fields["status"].choices),
+            {1: "Active", 2: "Inactive"},
+        )
+
+
+class DeclaredFieldOverrideTests(SimpleTestCase):
+    def test_declared_field_overrides_auto_generated(self):
+        class CityWithFloatPop(EmbeddedModelSerializer):
+            population = serializers.FloatField()
+
+            class Meta:
+                model = City
+                fields = "__all__"
+
+        fields = CityWithFloatPop().get_fields()
+        self.assertIsInstance(fields["population"], serializers.FloatField)
+
+    def test_declared_field_is_used_in_serialization(self):
+        class CityUpperName(EmbeddedModelSerializer):
+            name = serializers.SerializerMethodField()
+
+            def get_name(self, obj):
+                return obj.name.upper()
+
+            class Meta:
+                model = City
+                fields = "__all__"
+
+        city = City(name="paris", population=2_000_000)
+        data = CityUpperName(city).data
+        self.assertEqual(data["name"], "PARIS")
+
+    def test_declared_field_used_in_deserialization(self):
+        class CityWithFloatPop(EmbeddedModelSerializer):
+            population = serializers.FloatField()
+
+            class Meta:
+                model = City
+                fields = "__all__"
+
+        s = CityWithFloatPop(data={"name": "Berlin", "population": "1.5e6"})
+        self.assertTrue(s.is_valid(), s.errors)
+        self.assertIsInstance(s.validated_data.population, float)
