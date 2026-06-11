@@ -314,7 +314,8 @@ class MongoModelSerializer(serializers.ModelSerializer):
             return super().build_field(field_name, info, model_class, nested_depth)
 
         result = _build_embedded_field(
-            model_field, ClassLookupDict(self.serializer_field_mapping)
+            model_field,
+            ClassLookupDict(self.serializer_field_mapping),  # type: ignore[arg-type]
         )
         if result:
             return result

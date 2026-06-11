@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from bson import json_util
 from debug_toolbar.panels.sql.forms import SQLSelectForm
@@ -19,7 +20,7 @@ class MQLBaseForm(SQLSelectForm):
         query_dict = self.cleaned_data["query"]
         alias = query_dict.get("alias", "default")
         connection = connections[alias]
-        db = connection.database
+        db = connection.database  # type: ignore[union-attr]
         collection_name, operation, args_list = parse_query_args(query_dict)
         collection = db[collection_name]
         return executor_func(
@@ -35,7 +36,7 @@ class MQLBaseForm(SQLSelectForm):
 
         # Call forms.Form.clean() to bypass SQLSelectForm.clean() which has
         # SQL-specific validation
-        cleaned_data = forms.Form.clean(self)
+        cleaned_data: dict[str, Any] = forms.Form.clean(self)  # type: ignore[assignment]
         request_id = cleaned_data.get("request_id")
         if not request_id:
             raise ValidationError(_("Missing request ID."))

@@ -14,7 +14,7 @@ lint:
     uvx pre-commit run --all-files --hook-stage manual
 
 typing:
-    uv run --group test pyright
+    uv run --group typing pyright
 
 pre-commit:
     uvx pre-commit run --all-files --hook-stage manual

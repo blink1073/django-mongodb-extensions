@@ -30,11 +30,22 @@ test = [
     "django-mongodb-backend>=6.0",
     "django-mongodb-extensions[mql_panel,rest_framework]",
 ]
+typing = [
+    "django-stubs>=6.0",
+    "djangorestframework-stubs>=3.14",
+    "pyright",
+    {include-group = "test"},
+]
 
 [project.urls]
 Documentation = "https://django-mongodb-extensions.readthedocs.io"
 Source = "https://github.com/mongodb-labs/django-mongodb-extensions"
 Tracker = "https://github.com/mongodb-labs/django-mongodb-extensions/issues"
+
+[tool.pyright]
+include = ["django_mongodb_extensions"]
+venvPath = "."
+venv = ".venv"
 
 [tool.ruff.lint]
 select = ["I", "F"]
