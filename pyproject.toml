@@ -8,7 +8,7 @@ version = "0.3.0.dev0"
 description = "Extensions for Django MongoDB Backend"
 readme = "README.md"
 license = { file="LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 
 [project.optional-dependencies]
 mql_panel = [
@@ -27,6 +27,7 @@ docs = [
 ]
 test = [
     "coverage",
+    "django-mongodb-backend>=6.0",
     "django-mongodb-extensions[mql_panel,rest_framework]",
 ]
 
