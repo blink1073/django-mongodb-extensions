@@ -39,6 +39,7 @@ extensions = [
 autodoc_mock_imports = [
     "bson",
     "debug_toolbar",
+    "django.views.decorators.csrf",
     "django_mongodb_backend",
     "pymongo",
     "rest_framework",

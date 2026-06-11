@@ -14,6 +14,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import ngettext
 
+from . import views
 from .utils import (
     get_mql_warning_threshold,
     patch_get_collection,
@@ -164,8 +165,6 @@ class MQLPanel(SQLPanel):
 
     @classmethod
     def get_urls(cls):
-        from . import views
-
         return [
             path("mql_query/", views.mql_query, name="mql_query"),
             path("mql_explain/", views.mql_explain, name="mql_explain"),
