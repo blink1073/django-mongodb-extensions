@@ -1,25 +1,37 @@
-====================================================
-Using Django REST Framework with embedded models
-====================================================
+=====================
+Django REST Framework
+=====================
 
-`Django REST Framework`_ (DRF) can serialize and deserialize
-:class:`~django_mongodb_backend.models.EmbeddedModel` fields using the
-serializer classes provided in :mod:`django_mongodb_extensions.rest_framework`.
+`Django REST Framework`_ (DRF) provides serializer support for
+`Django MongoDB Backend`_ models through the classes in
+``django_mongodb_extensions.rest_framework``.
+
+All models using :class:`~django_mongodb_backend.fields.ObjectIdAutoField`
+(the default primary key for MongoDB models) need
+:class:`~django_mongodb_extensions.rest_framework.MongoModelSerializer` rather
+than DRF's ``ModelSerializer``, because the ObjectId primary key requires
+special handling.
 
 .. _Django REST Framework: https://www.django-rest-framework.org/
+.. _Django MongoDB Backend: https://django-mongodb-backend.readthedocs.io/
 
 Installation
 ============
 
-Install the package with the ``rest_framework`` extra:
+This package requires Django REST Framework 3.14 or later.
+
+If you don't already have a compatible version of DRF installed, use the
+``rest_framework`` extra to install it alongside this package:
 
 .. code-block:: console
 
    pip install "django-mongodb-extensions[rest_framework]"
 
-Add ``rest_framework`` to :setting:`INSTALLED_APPS`:
+Otherwise, install the package without the extra and follow DRF's
+`installation instructions <https://www.django-rest-framework.org/#installation>`_
+separately.
 
-.. code-block:: python
+Add ``rest_framework`` to :setting:`INSTALLED_APPS`::
 
    INSTALLED_APPS = [
        # ...
@@ -32,10 +44,9 @@ Usage
 ``EmbeddedModelSerializer``
 ---------------------------
 
-Subclass :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer`
-for each :class:`~django_mongodb_backend.models.EmbeddedModel` you want to
-serialize. Set ``Meta.model`` and ``Meta.fields`` just like Django's
-``ModelForm``:
+Subclass :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer` for each
+:class:`~django_mongodb_backend.models.EmbeddedModel` you want to serialize.
+Set ``Meta.model`` and ``Meta.fields`` just like Django's ``ModelForm``:
 
 .. code-block:: python
 
@@ -47,16 +58,10 @@ serialize. Set ``Meta.model`` and ``Meta.fields`` just like Django's
            model = Address
            fields = "__all__"
 
-Fields are auto-generated from the embedded model's field definitions:
-
-* :class:`~django_mongodb_backend.fields.EmbeddedModelField` → nested
-  ``EmbeddedModelSerializer`` (recursive)
-* :class:`~django_mongodb_backend.fields.EmbeddedModelArrayField` → DRF
-  ``ListSerializer`` wrapping a nested ``EmbeddedModelSerializer``
-* :class:`~django_mongodb_backend.fields.ArrayField` → DRF ``ListField``
-* All standard Django model fields → standard DRF fields
-
-The primary key field is excluded automatically.
+Fields are auto-generated from the embedded model's field definitions,
+supporting the same MongoDB-specific field types as
+:class:`~django_mongodb_extensions.rest_framework.MongoModelSerializer`
+(see below). The primary key field is excluded automatically.
 
 ``to_internal_value()`` returns an ``EmbeddedModel`` instance rather than a
 plain ``dict``, so the result integrates directly with the Django MongoDB
@@ -68,8 +73,8 @@ models must be saved through their parent model.
 ``MongoModelSerializer``
 ------------------------
 
-Subclass :class:`~django_mongodb_extensions.rest_framework.MongoModelSerializer`
-for regular Django models that contain MongoDB-specific fields:
+Subclass :class:`~django_mongodb_extensions.rest_framework.MongoModelSerializer` for regular Django models that contain
+MongoDB-specific fields:
 
 .. code-block:: python
 
@@ -109,15 +114,13 @@ Examples
 Single embedded model field
 ----------------------------
 
+In ``models.py``:
+
 .. code-block:: python
 
    from django.db import models
    from django_mongodb_backend.fields import EmbeddedModelField
    from django_mongodb_backend.models import EmbeddedModel
-   from django_mongodb_extensions.rest_framework import (
-       EmbeddedModelSerializer,
-       MongoModelSerializer,
-   )
 
 
    class Address(EmbeddedModel):
@@ -129,6 +132,15 @@ Single embedded model field
        name = models.CharField(max_length=100)
        address = EmbeddedModelField(Address)
 
+In ``serializers.py``:
+
+.. code-block:: python
+
+   from django_mongodb_extensions.rest_framework import (
+       EmbeddedModelSerializer,
+       MongoModelSerializer,
+   )
+
 
    class AddressSerializer(EmbeddedModelSerializer):
        class Meta:
@@ -137,6 +149,20 @@ Single embedded model field
 
 
    class PersonSerializer(MongoModelSerializer):
+       class Meta:
+           model = Person
+           fields = "__all__"
+
+The ``address`` field on ``PersonSerializer`` is auto-generated as a nested
+``EmbeddedModelSerializer`` for ``Address``. Declaring ``AddressSerializer``
+explicitly is only needed when you want to customize the embedded model's
+serialization:
+
+.. code-block:: python
+
+   class PersonSerializer(MongoModelSerializer):
+       address = AddressSerializer()  # override the auto-generated field
+
        class Meta:
            model = Person
            fields = "__all__"
@@ -160,6 +186,8 @@ Deserializing and saving:
 Array of embedded models
 ------------------------
 
+In ``models.py``:
+
 .. code-block:: python
 
    from django_mongodb_backend.fields import EmbeddedModelArrayField
@@ -172,6 +200,15 @@ Array of embedded models
    class Article(models.Model):
        title = models.CharField(max_length=200)
        tags = EmbeddedModelArrayField(Tag, null=True)
+
+In ``serializers.py``:
+
+.. code-block:: python
+
+   from django_mongodb_extensions.rest_framework import (
+       EmbeddedModelSerializer,
+       MongoModelSerializer,
+   )
 
 
    class TagSerializer(EmbeddedModelSerializer):
@@ -200,13 +237,14 @@ are serialized automatically by
 :class:`~django_mongodb_extensions.rest_framework.PolymorphicEmbeddedModelSerializer`,
 which dispatches to the correct concrete
 :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer` based
-on the runtime type of each instance:
+on the type of each instance:
+
+In ``models.py``:
 
 .. code-block:: python
 
    from django_mongodb_backend.fields import PolymorphicEmbeddedModelField
    from django_mongodb_backend.models import EmbeddedModel
-   from django_mongodb_extensions.rest_framework import MongoModelSerializer
 
 
    class Dog(EmbeddedModel):
@@ -223,6 +261,12 @@ on the runtime type of each instance:
        name = models.CharField(max_length=100)
        pet = PolymorphicEmbeddedModelField([Dog, Cat], null=True)
 
+In ``serializers.py``:
+
+.. code-block:: python
+
+   from django_mongodb_extensions.rest_framework import MongoModelSerializer
+
 
    class PetOwnerSerializer(MongoModelSerializer):
        class Meta:
@@ -237,5 +281,5 @@ Serializing a ``PetOwner`` with a ``Dog`` instance:
    data = PetOwnerSerializer(owner).data
    # {"id": "...", "name": "Alice", "pet": {"name": "Rex", "barks": true}}
 
-Because ``PolymorphicEmbeddedModelField`` is not editable, the serialized field
-is read-only. To accept writes, declare the field manually on the serializer.
+The ``pet`` and ``pets`` fields are read-only. Write operations are not
+supported for polymorphic embedded model fields.

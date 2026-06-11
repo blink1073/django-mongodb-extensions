@@ -9,7 +9,17 @@ import sys
 from importlib.metadata import version as _version
 from pathlib import Path
 
+import django
+from django.conf import settings
+
 sys.path.append(str((Path(__file__).parent / "_ext").resolve()))
+
+if not settings.configured:
+    settings.configure(
+        INSTALLED_APPS=["django.contrib.contenttypes", "django.contrib.auth"],
+        DATABASES={},
+    )
+    django.setup()
 
 project = "Django MongoDB Extensions"
 copyright = "2025, The MongoDB Python Team"
@@ -21,8 +31,17 @@ toc_object_entries = False
 
 extensions = [
     "djangodocs",
+    "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
+]
+
+autodoc_mock_imports = [
+    "bson",
+    "debug_toolbar",
+    "django_mongodb_backend",
+    "pymongo",
+    "rest_framework",
 ]
 
 exclude_patterns = ["_build"]
@@ -31,6 +50,10 @@ intersphinx_mapping = {
     "django": (
         "https://docs.djangoproject.com/en/stable/",
         "https://docs.djangoproject.com/en/stable/_objects/",
+    ),
+    "django-mongodb-backend": (
+        "https://django-mongodb-backend.readthedocs.io/en/latest/",
+        None,
     ),
     "python": ("https://docs.python.org/3/", None),
 }

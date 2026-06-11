@@ -105,7 +105,7 @@ def _build_embedded_field(
         kwargs = {}
         if model_field.null:
             kwargs["allow_null"] = True
-        if child_field is not None:
+        if child_field:
             kwargs["child"] = child_field
         return serializers.ListField, kwargs
 
@@ -117,11 +117,8 @@ def _get_serializer_field(
     field_mapping: ClassLookupDict | None = None,
 ) -> Field[Any, Any, Any, Any] | None:
     """Return a DRF field instance for model_field, or None to skip it."""
-    if model_field.primary_key:
-        return None
-
     result = _build_embedded_field(model_field, field_mapping)
-    if result is not None:
+    if result:
         field_cls, kwargs = result
         return field_cls(**kwargs)
 
@@ -158,7 +155,8 @@ class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
     values.
 
     Serializes each instance using an auto-generated
-    :class:`EmbeddedModelSerializer` for its concrete type. Write operations
+    :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer`
+    for its concrete type. Write operations
     are not supported because ``PolymorphicEmbeddedModelField`` is not
     editable.
     """
@@ -220,7 +218,7 @@ class EmbeddedModelSerializer(serializers.Serializer):
         embedded_model: type[Any] = meta.model
         all_fields = {f.name: f for f in embedded_model._meta.fields}
 
-        explicit = meta.fields != "__all__"
+        is_explicit = meta.fields != "__all__"
         field_names: list[str] | str = meta.fields
         if field_names == "__all__":
             field_names = list(all_fields)
@@ -230,7 +228,7 @@ class EmbeddedModelSerializer(serializers.Serializer):
             )
 
         # Explicitly declared fields take priority over auto-generated ones.
-        declared = copy.deepcopy(self._declared_fields)
+        declared_fields = copy.deepcopy(self._declared_fields)
         # A custom mapping may be set by _make_embedded_serializer on
         # auto-generated classes.
         field_mapping: ClassLookupDict | None = getattr(
@@ -239,22 +237,19 @@ class EmbeddedModelSerializer(serializers.Serializer):
 
         result: dict[str, Field[Any, Any, Any, Any]] = {}
         for name in field_names:
-            if name in declared:
-                result[name] = declared[name]
+            if name in declared_fields:
+                result[name] = declared_fields[name]
                 continue
             model_field = all_fields.get(name)
             if model_field is None:
                 raise FieldDoesNotExist(
                     f"Field '{name}' not found on {embedded_model.__name__}."
                 )
-            if explicit and model_field.primary_key:
-                raise ValueError(
-                    f"Primary key field '{name}' cannot be included in "
-                    f"{self.__class__.__name__}.Meta.fields. "
-                    "EmbeddedModelSerializer excludes primary keys automatically."
-                )
+            # Skip the primary key when using __all__; respect an explicit list.
+            if not is_explicit and model_field.primary_key:
+                continue
             drf_field = _get_serializer_field(model_field, field_mapping)
-            if drf_field is not None:
+            if drf_field:
                 result[name] = drf_field
         return result
 
@@ -318,7 +313,7 @@ class MongoModelSerializer(serializers.ModelSerializer):
         result = _build_embedded_field(
             model_field, ClassLookupDict(self.serializer_field_mapping)
         )
-        if result is not None:
+        if result:
             return result
 
         return super().build_field(field_name, info, model_class, nested_depth)

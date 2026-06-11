@@ -9,3 +9,10 @@ Extensions for `Django MongoDB Backend <https://django-mongodb-backend.readthedo
 
    mql-panel
    rest-framework
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API Reference
+
+   ref/mql-panel
+   ref/rest-framework

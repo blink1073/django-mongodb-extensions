@@ -20,6 +20,7 @@ rest_framework = [
 
 [dependency-groups]
 docs = [
+    "django>=4.2",
     "furo",
     "sphinx>=7",
     "sphinx-copybutton",

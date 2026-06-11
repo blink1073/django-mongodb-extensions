@@ -118,7 +118,7 @@ class EmbeddedModelSerializerToInternalValueTests(SimpleTestCase):
     def test_missing_required_field_raises(self):
         s = CitySerializer(data={"name": "NoPopulation"})
         self.assertFalse(s.is_valid())
-        self.assertIn("population", s.errors)
+        self.assertEqual(s.errors["population"], ["This field is required."])
 
     def test_wrong_type_raises(self):
         s = CitySerializer(data={"name": "BadPop", "population": "not-a-number"})
@@ -149,24 +149,33 @@ class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
         class BrokenSerializer(EmbeddedModelSerializer):
             pass
 
-        with self.assertRaises(AssertionError):
-            BrokenSerializer().get_fields()
+        self.assertRaisesMessage(
+            AssertionError,
+            "Class BrokenSerializer missing 'Meta' attribute.",
+            BrokenSerializer().get_fields,
+        )
 
     def test_missing_meta_model_raises(self):
         class BrokenSerializer(EmbeddedModelSerializer):
             class Meta:
                 fields = "__all__"
 
-        with self.assertRaises(AssertionError):
-            BrokenSerializer().get_fields()
+        self.assertRaisesMessage(
+            AssertionError,
+            "Class BrokenSerializer.Meta missing 'model' attribute.",
+            BrokenSerializer().get_fields,
+        )
 
     def test_missing_meta_fields_raises(self):
         class BrokenSerializer(EmbeddedModelSerializer):
             class Meta:
                 model = City
 
-        with self.assertRaises(AssertionError):
-            BrokenSerializer().get_fields()
+        self.assertRaisesMessage(
+            AssertionError,
+            "Class BrokenSerializer.Meta missing 'fields' attribute.",
+            BrokenSerializer().get_fields,
+        )
 
     def test_unknown_field_name_raises(self):
         class BrokenSerializer(EmbeddedModelSerializer):
@@ -174,17 +183,20 @@ class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
                 model = City
                 fields = ["name", "nonexistent_field"]
 
-        with self.assertRaises(FieldDoesNotExist):
-            BrokenSerializer().get_fields()
+        self.assertRaisesMessage(
+            FieldDoesNotExist,
+            "Field 'nonexistent_field' not found on City.",
+            BrokenSerializer().get_fields,
+        )
 
-    def test_explicit_primary_key_raises(self):
-        class BrokenSerializer(EmbeddedModelSerializer):
+    def test_explicit_primary_key_included(self):
+        class CityWithIdSerializer(EmbeddedModelSerializer):
             class Meta:
                 model = City
                 fields = ["id", "name"]
 
-        with self.assertRaises(ValueError, msg="Primary key field 'id'"):
-            BrokenSerializer().get_fields()
+        fields = CityWithIdSerializer().get_fields()
+        self.assertEqual(list(fields), ["id", "name"])
 
 
 class UniqueValidatorStrippingTests(SimpleTestCase):

@@ -46,8 +46,8 @@ class Cat(EmbeddedModel):
 
 class PetOwner(models.Model):
     name = models.CharField(max_length=100)
-    pet = PolymorphicEmbeddedModelField([Dog, Cat], null=True, blank=True)
-    pets = PolymorphicEmbeddedModelArrayField([Dog, Cat], null=True, blank=True)
+    pet = PolymorphicEmbeddedModelField((Dog, Cat), null=True, blank=True)
+    pets = PolymorphicEmbeddedModelArrayField((Dog, Cat), null=True, blank=True)
 
 
 class Continent(models.Model):

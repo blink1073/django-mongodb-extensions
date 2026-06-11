@@ -139,9 +139,7 @@ class MongoModelSerializerExplicitFieldTests(SimpleTestCase):
                 fields = ["name"]
 
         fields = PartialContinentSerializer().get_fields()
-        self.assertIn("name", fields)
-        self.assertNotIn("country", fields)
-        self.assertNotIn("countries", fields)
+        self.assertEqual(list(fields), ["name"])
 
 
 class FieldMappingPropagationTests(SimpleTestCase):

@@ -1,8 +1,8 @@
-import unittest
-
 try:
     import rest_framework  # noqa: F401
 except ImportError:
+    import unittest
+
     raise unittest.SkipTest("djangorestframework not installed") from None
 
 from django.test import SimpleTestCase, TestCase
@@ -33,9 +33,6 @@ class PolymorphicEmbeddedModelSerializerTests(SimpleTestCase):
         self.assertIsInstance(fields["pets"].child, PolymorphicEmbeddedModelSerializer)
 
 
-# These tests require django-mongodb-backend to store embedded_models as a
-# tuple so isinstance() accepts it. Fixed in INTPYTHON-986.
-@unittest.skip("Requires django-mongodb-backend fix from INTPYTHON-986")
 class PolymorphicEmbeddedModelSerializerReadTests(TestCase):
     def test_read_polymorphic_field_dog(self):
         original = PetOwner.objects.create(

@@ -22,4 +22,4 @@ pre-commit:
     uvx pre-commit run --all-files --hook-stage manual
 
 docs:
-    cd docs && uv run --group docs make html
+    cd docs && uv run --group docs sphinx-build -n -b html . _build/html
