@@ -27,8 +27,7 @@ docs = [
 ]
 test = [
     "coverage",
-    "django-debug-toolbar>=4.0",
-    "djangorestframework>=3.14",
+    "django-mongodb-extensions[mql_panel,rest_framework]",
 ]
 
 [project.urls]
