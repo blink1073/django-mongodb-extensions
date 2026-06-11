@@ -1,10 +1,3 @@
-try:
-    import rest_framework  # noqa: F401
-except ImportError:
-    import unittest
-
-    raise unittest.SkipTest("djangorestframework not installed") from None
-
 from django.test import SimpleTestCase, TestCase
 from rest_framework import serializers
 

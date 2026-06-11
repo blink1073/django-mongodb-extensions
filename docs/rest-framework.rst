@@ -2,6 +2,8 @@
 Django REST Framework
 =====================
 
+.. versionadded:: 0.3.0
+
 `Django REST Framework`_ (DRF) provides serializer support for
 `Django MongoDB Backend`_ models through the classes in
 ``django_mongodb_extensions.rest_framework``.
@@ -27,16 +29,8 @@ If you don't already have a compatible version of DRF installed, use the
 
    pip install "django-mongodb-extensions[rest_framework]"
 
-Otherwise, install the package without the extra and follow DRF's
-`installation instructions <https://www.django-rest-framework.org/#installation>`_
-separately.
-
-Add ``rest_framework`` to :setting:`INSTALLED_APPS`::
-
-   INSTALLED_APPS = [
-       # ...
-       "rest_framework",
-   ]
+Then configure Django REST Framework by following their
+`installation instructions <https://www.django-rest-framework.org/#installation>`_.
 
 Usage
 =====

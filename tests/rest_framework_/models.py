@@ -3,6 +3,7 @@ from django_mongodb_backend.fields import (
     ArrayField,
     EmbeddedModelArrayField,
     EmbeddedModelField,
+    ObjectIdField,
     PolymorphicEmbeddedModelArrayField,
     PolymorphicEmbeddedModelField,
 )
@@ -19,11 +20,6 @@ class Country(EmbeddedModel):
     capital = EmbeddedModelField(City, null=True, blank=True)
     cities = EmbeddedModelArrayField(City, null=True, blank=True)
     languages = ArrayField(models.CharField(max_length=50), null=True, blank=True)
-
-
-class CityWithUniqueCode(EmbeddedModel):
-    name = models.CharField(max_length=100)
-    code = models.CharField(max_length=10, unique=True)
 
 
 STATUS_CHOICES = [(1, "Active"), (2, "Inactive")]
@@ -55,3 +51,8 @@ class Continent(models.Model):
     country = EmbeddedModelField(Country, null=True, blank=True)
     countries = EmbeddedModelArrayField(Country, null=True, blank=True)
     notable_cities = ArrayField(models.CharField(max_length=100), null=True, blank=True)
+
+
+class Widget(models.Model):
+    name = models.CharField(max_length=100)
+    ref = ObjectIdField(null=True, blank=True)

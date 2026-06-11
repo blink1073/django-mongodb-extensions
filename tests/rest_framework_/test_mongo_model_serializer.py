@@ -1,17 +1,10 @@
-import unittest
-
-try:
-    import rest_framework  # noqa: F401
-except ImportError:
-    raise unittest.SkipTest("djangorestframework not installed") from None
-
 from django.db import models
 from django.test import SimpleTestCase, TestCase
 from rest_framework import serializers
 
 from django_mongodb_extensions.rest_framework import MongoModelSerializer
 
-from .models import City, Continent, Country
+from .models import City, Continent, Country, Widget
 from .serializers import CitySerializer, ContinentSerializer
 
 
@@ -175,6 +168,28 @@ class FieldMappingPropagationTests(SimpleTestCase):
         base_fields = ContinentSerializer().get_fields()
         capital_fields = base_fields["country"].get_fields()["capital"].get_fields()
         self.assertIsInstance(capital_fields["population"], serializers.IntegerField)
+
+
+class ObjectIdFieldMappingTests(SimpleTestCase):
+    def test_object_id_auto_field_maps_to_char_field(self):
+        # ObjectIdAutoField is the default pk for all models; verify it maps
+        # to CharField so ObjectId values round-trip as strings.
+        class WidgetSerializer(MongoModelSerializer):
+            class Meta:
+                model = Widget
+                fields = "__all__"
+
+        fields = WidgetSerializer().get_fields()
+        self.assertIsInstance(fields["id"], serializers.CharField)
+
+    def test_object_id_field_maps_to_char_field(self):
+        class WidgetSerializer(MongoModelSerializer):
+            class Meta:
+                model = Widget
+                fields = "__all__"
+
+        fields = WidgetSerializer().get_fields()
+        self.assertIsInstance(fields["ref"], serializers.CharField)
 
 
 class MongoModelSerializerCreateTests(TestCase):

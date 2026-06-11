@@ -228,6 +228,9 @@ class EmbeddedModelSerializer(serializers.Serializer):
             )
 
         # Explicitly declared fields take priority over auto-generated ones.
+        # Deepcopy mirrors DRF's own get_fields(): field instances are mutated
+        # when bound (bind() sets field_name and parent), so each serializer
+        # instance needs its own copy to avoid cross-instance interference.
         declared_fields = copy.deepcopy(self._declared_fields)
         # A custom mapping may be set by _make_embedded_serializer on
         # auto-generated classes.

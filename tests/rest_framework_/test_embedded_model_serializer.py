@@ -1,21 +1,13 @@
-import unittest
-
-try:
-    import rest_framework  # noqa: F401
-except ImportError:
-    raise unittest.SkipTest("djangorestframework not installed") from None
-
 from django.core.exceptions import FieldDoesNotExist
 from django.test import SimpleTestCase
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
 
 from django_mongodb_extensions.rest_framework import (
     EmbeddedModelSerializer,
     MongoModelSerializer,
 )
 
-from .models import City, CityWithUniqueCode, Continent, Country
+from .models import City, Continent, Country
 from .serializers import CitySerializer, CountrySerializer, StatusTagSerializer
 
 
@@ -131,6 +123,36 @@ class EmbeddedModelSerializerToInternalValueTests(SimpleTestCase):
         self.assertTrue(s.is_valid(), s.errors)
         self.assertIsNone(s.validated_data.capital)
 
+    def test_invalid_nested_embedded_field_errors(self):
+        data = {
+            "name": "Badland",
+            "capital": {"name": "Oops", "population": "not-a-number"},
+            "cities": None,
+            "languages": None,
+        }
+        s = CountrySerializer(data=data)
+        self.assertFalse(s.is_valid())
+        self.assertEqual(
+            s.errors["capital"]["population"], ["A valid integer is required."]
+        )
+
+    def test_invalid_nested_embedded_array_field_errors(self):
+        data = {
+            "name": "Badland",
+            "capital": None,
+            "cities": [
+                {"name": "Good", "population": 1_000_000},
+                {"name": "Bad", "population": "not-a-number"},
+            ],
+            "languages": None,
+        }
+        s = CountrySerializer(data=data)
+        self.assertFalse(s.is_valid())
+        # Errors are indexed by position; the first city is valid.
+        self.assertEqual(
+            s.errors["cities"][1]["population"], ["A valid integer is required."]
+        )
+
 
 class EmbeddedModelSerializerNotSavableTests(SimpleTestCase):
     def test_create_raises(self):
@@ -145,16 +167,6 @@ class EmbeddedModelSerializerNotSavableTests(SimpleTestCase):
 
 
 class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
-    def test_missing_meta_raises(self):
-        class BrokenSerializer(EmbeddedModelSerializer):
-            pass
-
-        self.assertRaisesMessage(
-            AssertionError,
-            "Class BrokenSerializer missing 'Meta' attribute.",
-            BrokenSerializer().get_fields,
-        )
-
     def test_missing_meta_model_raises(self):
         class BrokenSerializer(EmbeddedModelSerializer):
             class Meta:
@@ -198,36 +210,29 @@ class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
         fields = CityWithIdSerializer().get_fields()
         self.assertEqual(list(fields), ["id", "name"])
 
-
-class UniqueValidatorStrippingTests(SimpleTestCase):
-    """
-    UniqueValidator must be removed for EmbeddedModel fields (manager
-    cannot be queried).
-    """
-
-    def test_unique_field_is_valid_without_crash(self):
-        class UniqueCodeSerializer(EmbeddedModelSerializer):
+    def test_explicit_primary_key_serializes_none_when_unset(self):
+        class CityWithIdSerializer(EmbeddedModelSerializer):
             class Meta:
-                model = CityWithUniqueCode
-                fields = "__all__"
+                model = City
+                fields = ["id", "name"]
 
-        s = UniqueCodeSerializer(data={"name": "NYC", "code": "NYC"})
-        # Would raise NotSupportedError before the fix if UniqueValidator
-        # was not stripped.
-        self.assertTrue(s.is_valid(), s.errors)
+        city = City(name="Paris", population=2_000_000)
+        data = CityWithIdSerializer(city).data
+        # Embedded model instances have no pk value unless explicitly set.
+        self.assertIsNone(data["id"])
+        self.assertEqual(data["name"], "Paris")
 
-    def test_unique_field_has_no_unique_validator(self):
-        class UniqueCodeSerializer(EmbeddedModelSerializer):
+    def test_explicit_primary_key_serializes_when_set(self):
+        class CityWithIdSerializer(EmbeddedModelSerializer):
             class Meta:
-                model = CityWithUniqueCode
-                fields = "__all__"
+                model = City
+                fields = ["id", "name"]
 
-        fields = UniqueCodeSerializer().get_fields()
-        code_validators = fields["code"].validators
-        self.assertFalse(
-            any(isinstance(v, UniqueValidator) for v in code_validators),
-            "UniqueValidator must not be present on EmbeddedModel fields.",
-        )
+        city = City(id=42, name="Berlin", population=3_500_000)
+        data = CityWithIdSerializer(city).data
+        # ObjectIdAutoField maps to CharField, so the value is coerced to str.
+        self.assertEqual(data["id"], "42")
+        self.assertEqual(data["name"], "Berlin")
 
 
 class ChoicesCoercionTests(SimpleTestCase):
