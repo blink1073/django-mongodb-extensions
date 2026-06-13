@@ -8,7 +8,7 @@ version = "0.3.0.dev0"
 description = "Extensions for Django MongoDB Backend"
 readme = "README.md"
 license = { file="LICENSE" }
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 mql_panel = [
@@ -20,18 +20,18 @@ rest_framework = [
 
 [dependency-groups]
 docs = [
-    "django>=4.2",
+    "django>=5.2",
     "furo",
     "sphinx>=7",
     "sphinx-copybutton",
 ]
 test = [
     "coverage",
-    "django-mongodb-backend>=6.0",
+    "django-mongodb-backend>=5.2",
     "django-mongodb-extensions[mql_panel,rest_framework]",
 ]
 typing = [
-    "django-stubs>=6.0",
+    "django-stubs>=5.2",
     "djangorestframework-stubs>=3.14",
     "pyright",
     {include-group = "test"},

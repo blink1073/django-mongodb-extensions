@@ -4,6 +4,10 @@ Extensions for Django MongoDB Backend
 
 [![Documentation](https://readthedocs.org/projects/django-mongodb-extensions/badge/?version=latest)](https://django-mongodb-extensions.readthedocs.io/en/latest/)
 
+Supports the current Django
+[long-term support (LTS) release](https://www.djangoproject.com/download/#supported-versions)
+and its supported Python versions.
+
 ## Installation
 
 ```bash
