@@ -19,14 +19,7 @@ similar to how the SQL panel works for relational databases.
 Installation
 ============
 
-Install the package with the ``mql_panel`` extra, which includes
-``django-debug-toolbar``:
-
-.. code-block:: console
-
-   pip install "django-mongodb-extensions[mql_panel]"
-
-Then configure Django Debug Toolbar by following their
+First, install and configure Django Debug Toolbar by following their
 `installation instructions <https://django-debug-toolbar.readthedocs.io/en/latest/installation.html>`_.
 
 1. Add ``django_mongodb_extensions`` to ``INSTALLED_APPS``:

@@ -28,13 +28,6 @@ connection_created.connect(
 
 
 class MQLPanel(SQLPanel):
-    """
-    A `Django Debug Toolbar`_ panel that records and displays MongoDB (MQL)
-    queries executed during a request, equivalent to the built-in SQL panel.
-
-    .. _Django Debug Toolbar: https://django-debug-toolbar.readthedocs.io/
-    """
-
     nav_title = _("MQL")
     template = "mql_panel/mql.html"
 
@@ -89,7 +82,7 @@ class MQLPanel(SQLPanel):
     def disable_instrumentation(self):
         for connection in connections.all():
             if hasattr(connection, "_mql_djdt_logger"):
-                connection._mql_djdt_logger = None  # type: ignore[attr-defined]
+                connection._mql_djdt_logger = None
 
     def enable_instrumentation(self):
         # Only patch MongoDB connections (those with get_collection method).
@@ -101,7 +94,7 @@ class MQLPanel(SQLPanel):
         for connection in connections.all():
             if hasattr(connection, "get_collection"):
                 patch_get_collection(connection)
-                connection._mql_djdt_logger = self  # type: ignore[attr-defined]
+                connection._mql_djdt_logger = self
 
     def generate_stats(self, request, response):
         duplicate_query_groups = defaultdict(list)
@@ -171,7 +164,7 @@ class MQLPanel(SQLPanel):
         ]
 
     @property
-    def has_content(self):  # type: ignore[override]
+    def has_content(self):
         return bool(self._queries)
 
     @property
