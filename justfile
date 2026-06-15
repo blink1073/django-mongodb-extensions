@@ -4,6 +4,9 @@ default:
 test:
     uv run --group test django-admin test -v 2 --settings=tests.settings
 
+test-52:
+    uv run --group test --with "django-mongodb-backend~=5.2" django-admin test -v 2 --settings=tests.settings
+
 test-coverage:
     uv run --group test coverage run -m django test -v 2 --settings=tests.settings
 

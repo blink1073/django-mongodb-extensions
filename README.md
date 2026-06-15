@@ -4,9 +4,14 @@ Extensions for Django MongoDB Backend
 
 [![Documentation](https://readthedocs.org/projects/django-mongodb-extensions/badge/?version=latest)](https://django-mongodb-extensions.readthedocs.io/en/latest/)
 
-Supports the current Django
-[long-term support (LTS) release](https://www.djangoproject.com/download/#supported-versions)
-and its supported Python versions.
+## Version Support
+
+| Django / Django MongoDB Backend | Django Debug Toolbar |
+|---------------------------------|---------------------|
+| 5.2 | ≥5.1 |
+| 6.0 | ≥6.2 |
+
+Django version support follows [Django's supported versions policy](https://www.djangoproject.com/download/#supported-versions).
 
 ## Installation
 
@@ -79,6 +84,13 @@ DJDT_MQL_MAX_QUERY_RESULTS = 25
 # in the debug toolbar (default is 500 ms).
 DJDT_MQL_WARNING_THRESHOLD = 1000
 ```
+
+### Django REST Framework
+
+Serializer support for Django MongoDB Backend models through
+`django_mongodb_extensions.rest_framework`. See the
+[documentation](https://django-mongodb-extensions.readthedocs.io/en/latest/rest-framework.html)
+for details.
 
 ## License
 

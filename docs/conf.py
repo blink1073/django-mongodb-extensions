@@ -14,6 +14,7 @@ from django.conf import settings
 
 sys.path.append(str((Path(__file__).parent / "_ext").resolve()))
 
+# Configure Django so autodoc can import and introspect the source modules.
 if not settings.configured:
     settings.configure(
         INSTALLED_APPS=["django.contrib.contenttypes", "django.contrib.auth"],

@@ -11,6 +11,11 @@ sphinx:
    configuration: docs/conf.py
    fail_on_warning: true
 
+python:
+   install:
+      - method: pip
+        path: .
+
 build:
   os: ubuntu-24.04
   tools:
@@ -18,8 +23,3 @@ build:
   jobs:
     post_install:
       - pip install --group docs
-
-python:
-  install:
-    - method: pip
-      path: .

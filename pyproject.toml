@@ -9,14 +9,24 @@ description = "Extensions for Django MongoDB Backend"
 readme = "README.md"
 license = { file="LICENSE" }
 requires-python = ">=3.10"
+classifiers = [
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+]
 
 [project.optional-dependencies]
 mql_panel = [
-    "django-debug-toolbar>=4.0",
+    "django-debug-toolbar>=5.1",
 ]
 rest_framework = [
     "djangorestframework>=3.14",
 ]
+
+[project.urls]
+Documentation = "https://django-mongodb-extensions.readthedocs.io"
+Source = "https://github.com/mongodb-labs/django-mongodb-extensions"
+Tracker = "https://github.com/mongodb-labs/django-mongodb-extensions/issues"
 
 [dependency-groups]
 docs = [
@@ -36,11 +46,6 @@ typing = [
     "pyright",
     {include-group = "test"},
 ]
-
-[project.urls]
-Documentation = "https://django-mongodb-extensions.readthedocs.io"
-Source = "https://github.com/mongodb-labs/django-mongodb-extensions"
-Tracker = "https://github.com/mongodb-labs/django-mongodb-extensions/issues"
 
 [tool.pyright]
 include = ["django_mongodb_extensions"]
