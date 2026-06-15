@@ -82,7 +82,7 @@ class MQLPanel(SQLPanel):
     def disable_instrumentation(self):
         for connection in connections.all():
             if hasattr(connection, "_mql_djdt_logger"):
-                connection._mql_djdt_logger = None
+                connection._mql_djdt_logger = None  # type: ignore[attr-defined]
 
     def enable_instrumentation(self):
         # Only patch MongoDB connections (those with get_collection method).
@@ -94,7 +94,7 @@ class MQLPanel(SQLPanel):
         for connection in connections.all():
             if hasattr(connection, "get_collection"):
                 patch_get_collection(connection)
-                connection._mql_djdt_logger = self
+                connection._mql_djdt_logger = self  # type: ignore[attr-defined]
 
     def generate_stats(self, request, response):
         duplicate_query_groups = defaultdict(list)
@@ -164,7 +164,7 @@ class MQLPanel(SQLPanel):
         ]
 
     @property
-    def has_content(self):
+    def has_content(self):  # type: ignore[override]
         return bool(self._queries)
 
     @property
