@@ -276,5 +276,5 @@ Serializing a ``PetOwner`` with a ``Dog`` instance::
    data = PetOwnerSerializer(owner).data
    # {"id": "...", "name": "Alice", "pet": {"name": "Rex", "barks": true}}
 
-The ``pet`` and ``pets`` fields are read-only. Write operations are not
-supported for polymorphic embedded model fields.
+The ``pet`` field is read-only. Write operations are not supported for
+polymorphic embedded model fields.

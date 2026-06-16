@@ -172,10 +172,7 @@ class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
         ).data
 
     def to_internal_value(self, data: Any) -> Any:
-        raise NotImplementedError(
-            f"{self.__class__.__name__} is read-only. "
-            "Declare the field manually on the serializer to support writes."
-        )
+        raise NotImplementedError(f"{self.__class__.__name__} is read-only.")
 
     def create(self, validated_data: Any) -> Any:
         raise NotImplementedError(f"{self.__class__.__name__} is read-only.")
@@ -218,12 +215,12 @@ class EmbeddedModelSerializer(serializers.Serializer):
         ), f"Class {self.__class__.__name__}.Meta missing 'fields' attribute."
 
         model: type[Any] = meta.model
-        all_fields_names = {f.name: f for f in embedded_model._meta.fields}
+        all_fields_names = {f.name: f for f in model._meta.fields}
 
         explicit_fields = meta.fields != ALL_FIELDS
         field_names: list[str] | str = meta.fields
         if field_names == ALL_FIELDS:
-            field_names = list(all_fields)
+            field_names = list(all_fields_names)
         elif not isinstance(field_names, (list, tuple)):
             raise AssertionError(
                 f"{self.__class__.__name__}.Meta.fields must be '__all__' or a list/tuple."
@@ -245,10 +242,10 @@ class EmbeddedModelSerializer(serializers.Serializer):
             if name in declared_fields:
                 result[name] = declared_fields[name]
                 continue
-            model_field = all_fields.get(name)
+            model_field = all_fields_names.get(name)
             if model_field is None:
                 raise FieldDoesNotExist(
-                    f"Field '{name}' not found on {embedded_model.__name__}."
+                    f"Field '{name}' not found on {model.__name__}."
                 )
             # Skip the primary key when using __all__; respect an explicit list.
             if not explicit_fields and model_field.primary_key:
