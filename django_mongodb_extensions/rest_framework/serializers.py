@@ -217,7 +217,7 @@ class EmbeddedModelSerializer(serializers.Serializer):
         model: type[Any] = meta.model
         all_fields_names = {f.name: f for f in model._meta.fields}
 
-        explicit_fields = meta.fields != ALL_FIELDS
+        has_explicit_fields = meta.fields != ALL_FIELDS
         field_names: list[str] | str = meta.fields
         if field_names == ALL_FIELDS:
             field_names = list(all_fields_names)
@@ -247,8 +247,9 @@ class EmbeddedModelSerializer(serializers.Serializer):
                 raise FieldDoesNotExist(
                     f"Field '{name}' not found on {model.__name__}."
                 )
-            # Skip the primary key when using __all__; respect an explicit list.
-            if not explicit_fields and model_field.primary_key:
+            # Skip the primary key when using __all__; otherwise, it can be
+            # included in a fields list.
+            if not has_explicit_fields and model_field.primary_key:
                 continue
             drf_field = _get_serializer_field(model_field, field_mapping)
             if drf_field:

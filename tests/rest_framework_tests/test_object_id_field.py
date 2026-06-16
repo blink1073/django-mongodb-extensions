@@ -23,6 +23,8 @@ class ObjectIdFieldToRepresentationTests(SimpleTestCase):
 
 
 class ObjectIdFieldToInternalValueTests(SimpleTestCase):
+    invalid_msg = "Enter a valid ObjectId (24-character hex string)."
+
     def _field(self):
         f = ObjectIdField()
         f.field_name = "id"
@@ -33,19 +35,19 @@ class ObjectIdFieldToInternalValueTests(SimpleTestCase):
         self.assertEqual(self._field().to_internal_value(s), s)
 
     def test_invalid_string_rejected(self):
-        with self.assertRaisesMessage(serializers.ValidationError, "valid ObjectId"):
+        with self.assertRaisesMessage(serializers.ValidationError, self.invalid_msg):
             self._field().to_internal_value("not-an-objectid")
 
     def test_too_short_rejected(self):
-        with self.assertRaises(serializers.ValidationError):
+        with self.assertRaisesMessage(serializers.ValidationError, self.invalid_msg):
             self._field().to_internal_value("abc123")
 
     def test_empty_string_rejected(self):
-        with self.assertRaises(serializers.ValidationError):
+        with self.assertRaisesMessage(serializers.ValidationError, self.invalid_msg):
             self._field().to_internal_value("")
 
     def test_integer_rejected(self):
-        with self.assertRaises(serializers.ValidationError):
+        with self.assertRaisesMessage(serializers.ValidationError, self.invalid_msg):
             self._field().to_internal_value(42)
 
 

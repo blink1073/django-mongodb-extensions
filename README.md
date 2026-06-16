@@ -7,9 +7,9 @@ Extensions for Django MongoDB Backend
 ## Version Support
 
 | Django / Django MongoDB Backend | Django Debug Toolbar | Django REST Framework |
-|---------------------------------|---------------------|-----------------------|
-| 5.2 | ≥5.1 | ≥3.16 |
-| 6.0 | ≥6.2 | ≥3.17 |
+|---------------------------------|----------------------|-----------------------|
+| 5.2                             | ≥5.1                 | ≥3.16                 |
+| 6.0                             | ≥6.2                 | ≥3.17                 |
 
 Django version support follows [Django's supported versions policy](https://www.djangoproject.com/download/#supported-versions).
 

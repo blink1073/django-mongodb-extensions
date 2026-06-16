@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from bson import ObjectId as BsonObjectId
+from bson import ObjectId
 from bson.errors import InvalidId
 from rest_framework import serializers
 
@@ -19,7 +19,7 @@ class ObjectIdField(serializers.CharField):
     def to_internal_value(self, data: Any) -> str:
         value: str = super().to_internal_value(data)
         try:
-            BsonObjectId(value)
+            ObjectId(value)
         except (InvalidId, TypeError):
             self.fail("invalid")
         return value

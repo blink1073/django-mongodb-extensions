@@ -157,12 +157,14 @@ class EmbeddedModelSerializerToInternalValueTests(SimpleTestCase):
 class EmbeddedModelSerializerNotSavableTests(SimpleTestCase):
     def test_create_raises(self):
         s = CitySerializer()
-        with self.assertRaises(NotImplementedError):
+        msg = "EmbeddedModel instances cannot be saved independently."
+        with self.assertRaisesMessage(NotImplementedError, msg):
             s.create({})
 
     def test_update_raises(self):
         s = CitySerializer()
-        with self.assertRaises(NotImplementedError):
+        msg = "EmbeddedModel instances cannot be updated independently."
+        with self.assertRaisesMessage(NotImplementedError, msg):
             s.update(City(), {})
 
 
@@ -230,7 +232,8 @@ class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
 
         city = City(id=42, name="Berlin", population=3_500_000)
         data = CityWithIdSerializer(city).data
-        # ObjectIdAutoField maps to ObjectIdField (CharField subclass), coerced to str.
+        # ObjectIdAutoField maps to ObjectIdField (CharField subclass), coerced
+        # to str.
         self.assertEqual(data["id"], "42")
         self.assertEqual(data["name"], "Berlin")
 
