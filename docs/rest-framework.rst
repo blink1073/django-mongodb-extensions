@@ -150,9 +150,8 @@ In ``serializers.py``:
 The ``address`` field on ``PersonSerializer`` is auto-generated as a nested
 ``EmbeddedModelSerializer`` for ``Address``. Declaring ``AddressSerializer``
 explicitly is only needed when you want to customize the embedded model's
-serialization:
+serialization::
 
-.. code-block:: python
 
    class PersonSerializer(MongoModelSerializer):
        address = AddressSerializer()  # override the auto-generated field
