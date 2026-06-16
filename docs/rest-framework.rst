@@ -20,7 +20,7 @@ special handling.
 Installation
 ============
 
-This package requires Django REST Framework 3.14 or later.
+This package requires Django REST Framework 3.16 or later.
 
 If you don't already have a compatible version of DRF installed, use the
 ``rest_framework`` extra to install it alongside this package:
@@ -29,8 +29,8 @@ If you don't already have a compatible version of DRF installed, use the
 
    pip install "django-mongodb-extensions[rest_framework]"
 
-Then configure Django REST Framework by following their
-`installation instructions <https://www.django-rest-framework.org/#installation>`_.
+Then configure Django REST Framework by following its `installation
+instructions <https://www.django-rest-framework.org/#installation>`_.
 
 Usage
 =====
@@ -38,9 +38,11 @@ Usage
 ``EmbeddedModelSerializer``
 ---------------------------
 
-Subclass :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer` for each
-:class:`~django_mongodb_backend.models.EmbeddedModel` you want to serialize.
-Set ``Meta.model`` and ``Meta.fields`` just like Django's ``ModelForm``:
+Subclass
+:class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer`
+for each :class:`~django_mongodb_backend.models.EmbeddedModel` you want to
+serialize. Set ``Meta.model`` and ``Meta.fields`` just like Django's
+``ModelForm``:
 
 .. code-block:: python
 
@@ -68,16 +70,17 @@ The following ``Meta`` options from DRF's ``ModelSerializer`` are **not**
 supported:
 
 * ``Meta.exclude`` — use an explicit field list instead.
-* ``Meta.extra_kwargs`` — silently ignored; declare field overrides explicitly
-  on the serializer class.
+* ``Meta.extra_kwargs`` — silently ignored; declare field overrides
+  explicitly on the serializer class.
 * ``Meta.read_only_fields`` — silently ignored for the same reason; use an
   explicit field declaration with ``read_only=True`` instead.
 
 ``MongoModelSerializer``
 ------------------------
 
-Subclass :class:`~django_mongodb_extensions.rest_framework.MongoModelSerializer` for regular Django models that contain
-MongoDB-specific fields:
+Subclass
+:class:`~django_mongodb_extensions.rest_framework.MongoModelSerializer`
+for regular Django models that contain MongoDB-specific fields:
 
 .. code-block:: python
 
@@ -95,8 +98,10 @@ generates the correct DRF fields for:
 * :class:`~django_mongodb_backend.fields.EmbeddedModelField`
 * :class:`~django_mongodb_backend.fields.EmbeddedModelArrayField`
 * :class:`~django_mongodb_backend.fields.ArrayField`
-* :class:`~django_mongodb_backend.fields.PolymorphicEmbeddedModelField` (read-only)
-* :class:`~django_mongodb_backend.fields.PolymorphicEmbeddedModelArrayField` (read-only)
+* :class:`~django_mongodb_backend.fields.PolymorphicEmbeddedModelField`
+  (read-only)
+* :class:`~django_mongodb_backend.fields.PolymorphicEmbeddedModelArrayField`
+  (read-only)
 * :class:`~django_mongodb_backend.fields.ObjectIdField`
 * :class:`~django_mongodb_backend.fields.ObjectIdAutoField`
 
@@ -173,7 +178,8 @@ Serializing a ``Person`` instance::
 
    person = Person.objects.get(pk=...)
    data = PersonSerializer(person).data
-   # {"id": "...", "name": "Alice", "address": {"city": "Berlin", "zip_code": "10115"}}
+   # {"id": "...", "name": "Alice",
+   #  "address": {"city": "Berlin", "zip_code": "10115"}}
 
 Deserializing and saving::
 
@@ -220,7 +226,8 @@ The ``tags`` field is represented as a JSON array of objects:
 
 .. code-block:: json
 
-   {"id": "...", "title": "Hello", "tags": [{"label": "python"}, {"label": "mongodb"}]}
+   {"id": "...", "title": "Hello",
+    "tags": [{"label": "python"}, {"label": "mongodb"}]}
 
 Polymorphic embedded model fields
 ----------------------------------
@@ -230,8 +237,8 @@ Polymorphic embedded model fields
 are serialized automatically by
 :class:`~django_mongodb_extensions.rest_framework.PolymorphicEmbeddedModelSerializer`,
 which dispatches to the correct concrete
-:class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer` based
-on the type of each instance:
+:class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer`
+based on the type of each instance:
 
 In ``models.py``::
 

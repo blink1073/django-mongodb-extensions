@@ -20,7 +20,7 @@ mql_panel = [
     "django-debug-toolbar>=5.1",
 ]
 rest_framework = [
-    "djangorestframework>=3.14",
+    "djangorestframework>=3.16",
 ]
 
 [project.urls]
@@ -42,7 +42,7 @@ test = [
 ]
 typing = [
     "django-stubs>=5.2",
-    "djangorestframework-stubs>=3.14",
+    "djangorestframework-stubs>=3.16",
     "pyright",
     {include-group = "test"},
 ]
