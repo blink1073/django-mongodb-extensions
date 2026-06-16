@@ -217,7 +217,7 @@ class EmbeddedModelSerializer(serializers.Serializer):
             meta, "fields"
         ), f"Class {self.__class__.__name__}.Meta missing 'fields' attribute."
 
-        embedded_model: type[Any] = meta.model
+        model: type[Any] = meta.model
         all_fields_names = {f.name: f for f in embedded_model._meta.fields}
 
         explicit_fields = meta.fields != ALL_FIELDS
