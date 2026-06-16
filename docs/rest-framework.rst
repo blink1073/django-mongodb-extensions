@@ -64,6 +64,15 @@ Backend ORM layer.
 Saving is not supported directly on ``EmbeddedModelSerializer`` — embedded
 models must be saved through their parent model.
 
+The following ``Meta`` options from DRF's ``ModelSerializer`` are **not**
+supported:
+
+* ``Meta.exclude`` — use an explicit field list instead.
+* ``Meta.extra_kwargs`` — silently ignored; declare field overrides explicitly
+  on the serializer class.
+* ``Meta.read_only_fields`` — silently ignored for the same reason; use an
+  explicit field declaration with ``read_only=True`` instead.
+
 ``MongoModelSerializer``
 ------------------------
 
