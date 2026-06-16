@@ -16,8 +16,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "rest_framework",
     "django_mongodb_extensions",
-    # Trailing underscore avoids label clash with DRF's "rest_framework" app above.
-    "tests.rest_framework_",
+    "tests.rest_framework_tests",
 ]
 DATABASES = {
     "default": {
@@ -41,7 +40,7 @@ MIGRATION_MODULES = {
     "auth": None,
     "contenttypes": None,
     "sessions": None,
-    "rest_framework_": None,  # label derived from tests.rest_framework_ above
+    "rest_framework_tests": None,
 }
 # Include MQLPanel for testing
 DEBUG_TOOLBAR_PANELS = [
