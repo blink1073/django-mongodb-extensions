@@ -89,7 +89,7 @@ DJDT_MQL_WARNING_THRESHOLD = 1000
 
 Serializer support for Django MongoDB Backend models through
 `django_mongodb_extensions.rest_framework`. See the
-[documentation](https://django-mongodb-extensions.readthedocs.io/en/latest/rest-framework.html)
+[documentation](https://django-mongodb-extensions.readthedocs.io/en/latest/rest-framework/)
 for details.
 
 ## License
