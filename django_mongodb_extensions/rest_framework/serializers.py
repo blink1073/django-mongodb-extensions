@@ -17,7 +17,7 @@ from django_mongodb_backend.fields import (
 )
 from rest_framework import serializers
 from rest_framework.fields import CharField, ChoiceField, Field
-from rest_framework.serializers import ModelField
+from rest_framework.serializers import ALL_FIELDS, ModelField
 from rest_framework.utils.field_mapping import ClassLookupDict, get_field_kwargs
 from rest_framework.validators import UniqueValidator
 
@@ -42,7 +42,7 @@ def _make_embedded_serializer(
     field_mapping: ClassLookupDict | None = None,
 ) -> type[EmbeddedModelSerializer]:
     attrs: dict[str, Any] = {
-        "Meta": type("Meta", (), {"model": embedded_model, "fields": "__all__"}),
+        "Meta": type("Meta", (), {"model": embedded_model, "fields": ALL_FIELDS}),
     }
     if field_mapping is not None:
         attrs["_field_mapping"] = field_mapping
@@ -220,9 +220,9 @@ class EmbeddedModelSerializer(serializers.Serializer):
         embedded_model: type[Any] = meta.model
         all_fields = {f.name: f for f in embedded_model._meta.fields}
 
-        is_explicit = meta.fields != "__all__"
+        explicit_fields = meta.fields != ALL_FIELDS
         field_names: list[str] | str = meta.fields
-        if field_names == "__all__":
+        if field_names == ALL_FIELDS:
             field_names = list(all_fields)
         elif not isinstance(field_names, (list, tuple)):
             raise AssertionError(
@@ -251,7 +251,7 @@ class EmbeddedModelSerializer(serializers.Serializer):
                     f"Field '{name}' not found on {embedded_model.__name__}."
                 )
             # Skip the primary key when using __all__; respect an explicit list.
-            if not is_explicit and model_field.primary_key:
+            if not explicit_fields and model_field.primary_key:
                 continue
             drf_field = _get_serializer_field(model_field, field_mapping)
             if drf_field:
