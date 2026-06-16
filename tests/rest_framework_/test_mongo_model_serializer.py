@@ -171,9 +171,9 @@ class FieldMappingPropagationTests(SimpleTestCase):
 
 
 class ObjectIdFieldMappingTests(SimpleTestCase):
-    def test_object_id_auto_field_maps_to_char_field(self):
-        # ObjectIdAutoField is the default pk for all models; verify it maps
-        # to CharField so ObjectId values round-trip as strings.
+    def test_object_id_auto_field_maps_to_object_id_field(self):
+        # ObjectIdAutoField maps to ObjectIdField (a CharField subclass) so
+        # ObjectId values round-trip as strings.
         class WidgetSerializer(MongoModelSerializer):
             class Meta:
                 model = Widget

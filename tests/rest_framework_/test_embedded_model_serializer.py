@@ -230,7 +230,7 @@ class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
 
         city = City(id=42, name="Berlin", population=3_500_000)
         data = CityWithIdSerializer(city).data
-        # ObjectIdAutoField maps to CharField, so the value is coerced to str.
+        # ObjectIdAutoField maps to ObjectIdField (CharField subclass), coerced to str.
         self.assertEqual(data["id"], "42")
         self.assertEqual(data["name"], "Berlin")
 

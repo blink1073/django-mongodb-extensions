@@ -21,13 +21,15 @@ from rest_framework.serializers import ModelField
 from rest_framework.utils.field_mapping import ClassLookupDict, get_field_kwargs
 from rest_framework.validators import UniqueValidator
 
+from .fields import ObjectIdField as ObjectIdSerializerField
+
 # Single source of truth for the MongoDB-extended field mapping.
 # EmbeddedModelSerializer uses this via _FIELD_MAPPING; MongoModelSerializer
 # inherits it directly as serializer_field_mapping, keeping both in sync.
 _MONGO_FIELD_MAPPING: dict[type, type] = {
     **serializers.ModelSerializer.serializer_field_mapping,
-    ObjectIdAutoField: serializers.CharField,
-    ObjectIdField: serializers.CharField,
+    ObjectIdAutoField: ObjectIdSerializerField,
+    ObjectIdField: ObjectIdSerializerField,
 }
 
 # ClassLookupDict wrapper used by _get_serializer_field

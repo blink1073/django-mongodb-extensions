@@ -160,17 +160,13 @@ serialization::
            model = Person
            fields = "__all__"
 
-Serializing a ``Person`` instance:
-
-.. code-block:: python
+Serializing a ``Person`` instance::
 
    person = Person.objects.get(pk=...)
    data = PersonSerializer(person).data
    # {"id": "...", "name": "Alice", "address": {"city": "Berlin", "zip_code": "10115"}}
 
-Deserializing and saving:
-
-.. code-block:: python
+Deserializing and saving::
 
    serializer = PersonSerializer(data=request.data)
    if serializer.is_valid():
@@ -179,9 +175,7 @@ Deserializing and saving:
 Array of embedded models
 ------------------------
 
-In ``models.py``:
-
-.. code-block:: python
+In ``models.py``::
 
    from django_mongodb_backend.fields import EmbeddedModelArrayField
 
@@ -194,9 +188,7 @@ In ``models.py``:
        title = models.CharField(max_length=200)
        tags = EmbeddedModelArrayField(Tag, null=True)
 
-In ``serializers.py``:
-
-.. code-block:: python
+In ``serializers.py``::
 
    from django_mongodb_extensions.rest_framework import (
        EmbeddedModelSerializer,
@@ -232,9 +224,7 @@ which dispatches to the correct concrete
 :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer` based
 on the type of each instance:
 
-In ``models.py``:
-
-.. code-block:: python
+In ``models.py``::
 
    from django_mongodb_backend.fields import PolymorphicEmbeddedModelField
    from django_mongodb_backend.models import EmbeddedModel
@@ -254,9 +244,7 @@ In ``models.py``:
        name = models.CharField(max_length=100)
        pet = PolymorphicEmbeddedModelField([Dog, Cat], null=True)
 
-In ``serializers.py``:
-
-.. code-block:: python
+In ``serializers.py``::
 
    from django_mongodb_extensions.rest_framework import MongoModelSerializer
 
@@ -266,9 +254,7 @@ In ``serializers.py``:
            model = PetOwner
            fields = "__all__"
 
-Serializing a ``PetOwner`` with a ``Dog`` instance:
-
-.. code-block:: python
+Serializing a ``PetOwner`` with a ``Dog`` instance::
 
    owner = PetOwner.objects.get(pk=...)
    data = PetOwnerSerializer(owner).data

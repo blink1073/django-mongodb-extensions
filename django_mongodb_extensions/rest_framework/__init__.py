@@ -1,4 +1,5 @@
 try:
+    from .fields import ObjectIdField
     from .serializers import (
         EmbeddedModelSerializer,
         MongoModelSerializer,
@@ -15,5 +16,6 @@ except ModuleNotFoundError as exc:
 __all__ = [
     "EmbeddedModelSerializer",
     "MongoModelSerializer",
+    "ObjectIdField",
     "PolymorphicEmbeddedModelSerializer",
 ]
