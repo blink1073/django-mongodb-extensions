@@ -158,18 +158,21 @@ class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
 
     Serializes each instance using an auto-generated
     :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer`
-    for its concrete type. Write operations
-    are not supported because ``PolymorphicEmbeddedModelField`` is not
-    editable.
+    for its concrete type. A ``_label`` key (e.g. ``"myapp.Dog"``) is
+    included in the output so consumers can identify the concrete type.
+    Write operations are not supported because
+    ``PolymorphicEmbeddedModelField`` is not editable.
     """
 
     def to_representation(self, instance: Any) -> Any:
         if instance is None:
             return None
         concrete_type: type = type(instance)
-        return _cached_polymorphic_serializer(concrete_type)(
+        meta = concrete_type._meta
+        data = _cached_polymorphic_serializer(concrete_type)(
             instance, context=self.context
         ).data
+        return {"_label": f"{meta.app_label}.{meta.object_name}", **data}
 
     def to_internal_value(self, data: Any) -> Any:
         raise NotImplementedError(f"{self.__class__.__name__} is read-only.")

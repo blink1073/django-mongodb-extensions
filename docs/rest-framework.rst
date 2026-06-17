@@ -15,6 +15,7 @@ than DRF's ``ModelSerializer``, because the ``ObjectId`` primary key requires
 special handling.
 
 .. _Django REST Framework: https://www.django-rest-framework.org/
+.. _DRF serializers: https://www.django-rest-framework.org/api-guide/serializers/#specifying-which-fields-to-include
 
 Installation
 ============
@@ -66,8 +67,8 @@ generates the correct DRF fields for Django MongoDB Backend's fields:
 
 Use :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer`
 for each :class:`~django_mongodb_backend.models.EmbeddedModel` you want to
-serialize. Set ``Meta.model`` and ``Meta.fields`` just like Django's
-``ModelForm``::
+serialize. Set ``Meta.model`` and ``Meta.fields`` just like other `DRF
+serializers`_::
 
     from django_mongodb_extensions.rest_framework import EmbeddedModelSerializer
 
@@ -88,8 +89,9 @@ that the result integrates with the Django MongoDB Backend ORM layer.
 Saving is not supported directly on ``EmbeddedModelSerializer`` — embedded
 models must be saved through their parent model.
 
-The following ``Meta`` options from DRF's ``ModelSerializer`` are **not**
-supported:
+``EmbeddedModelSerializer`` implements its own ``get_fields()`` rather than
+delegating to ``ModelSerializer``, so the following ``Meta`` options are not
+yet implemented (contributions welcome):
 
 * ``Meta.exclude`` — use an explicit field list instead.
 * ``Meta.extra_kwargs`` — silently ignored; declare field overrides
@@ -121,6 +123,34 @@ In ``models.py``::
 
 In ``serializers.py``::
 
+    from django_mongodb_extensions.rest_framework import MongoModelSerializer
+
+    from .models import Person
+
+
+    class PersonSerializer(MongoModelSerializer):
+        class Meta:
+            model = Person
+            fields = "__all__"
+
+The ``address`` field is auto-generated as a nested
+:class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer` for
+``Address``. Serializing a ``Person`` instance::
+
+    >>> person = Person.objects.get(name="Alice")
+    >>> data = PersonSerializer(person).data
+    {"id": "...", "name": "Alice", "address": {"city": "Berlin", "zip_code": "10115"}}
+
+Deserializing and saving::
+
+    serializer = PersonSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+
+To customize the embedded model's serialization, declare an
+:class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer`
+subclass and assign it as an explicit field::
+
     from django_mongodb_extensions.rest_framework import (
         EmbeddedModelSerializer,
         MongoModelSerializer,
@@ -136,33 +166,11 @@ In ``serializers.py``::
 
 
     class PersonSerializer(MongoModelSerializer):
-        class Meta:
-            model = Person
-            fields = "__all__"
-
-The ``address`` field on ``PersonSerializer`` is auto-generated as a nested
-``EmbeddedModelSerializer`` for ``Address``. Declaring ``AddressSerializer``
-explicitly is only needed when you want to customize the embedded model's
-serialization::
-
-    class PersonSerializer(MongoModelSerializer):
-        address = AddressSerializer()  # override the auto-generated field
+        address = AddressSerializer()
 
         class Meta:
             model = Person
             fields = "__all__"
-
-Serializing a ``Person`` instance::
-
-    >>> person = Person.objects.get(name="Alice")
-    >>> data = PersonSerializer(person).data
-    {"id": "...", "name": "Alice", "address": {"city": "Berlin", "zip_code": "10115"}}
-
-Deserializing and saving::
-
-    serializer = PersonSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
 
 Array of embedded models
 ------------------------
@@ -184,18 +192,9 @@ In ``models.py``::
 
 In ``serializers.py``::
 
-    from django_mongodb_extensions.rest_framework import (
-        EmbeddedModelSerializer,
-        MongoModelSerializer,
-    )
+    from django_mongodb_extensions.rest_framework import MongoModelSerializer
 
-    from .models import Article, Tag
-
-
-    class TagSerializer(EmbeddedModelSerializer):
-        class Meta:
-            model = Tag
-            fields = "__all__"
+    from .models import Article
 
 
     class ArticleSerializer(MongoModelSerializer):
@@ -203,7 +202,8 @@ In ``serializers.py``::
             model = Article
             fields = "__all__"
 
-The ``tags`` field is represented as a JSON array of objects:
+The ``tags`` field is auto-generated and represented as a JSON array of
+objects:
 
 .. code-block:: json
 
@@ -261,7 +261,8 @@ Serializing a ``PetOwner`` with a ``Dog`` instance::
 
     >>> owner = PetOwner.objects.get(name="Alice")
     >>> data = PetOwnerSerializer(owner).data
-    {"id": "...", "name": "Alice", "pet": {"name": "Rex", "barks": true}}
+    {"id": "...", "name": "Alice",
+     "pet": {"_label": "myapp.Dog", "name": "Rex", "barks": true}}
 
 The ``pet`` field is read-only. Write operations are not supported for
 polymorphic embedded model fields.

@@ -34,7 +34,10 @@ class PolymorphicEmbeddedModelSerializerReadTests(TestCase):
         loaded = PetOwner.objects.get(pk=original.pk)
         data = PetOwnerSerializer(loaded).data
         self.assertEqual(data["name"], "Alice")
-        self.assertEqual(data["pet"], {"name": "Rex", "barks": True})
+        self.assertEqual(
+            data["pet"],
+            {"_label": "rest_framework_tests.Dog", "name": "Rex", "barks": True},
+        )
         self.assertIsNone(data["pets"])
 
     def test_read_polymorphic_field_cat(self):
@@ -43,7 +46,10 @@ class PolymorphicEmbeddedModelSerializerReadTests(TestCase):
         )
         loaded = PetOwner.objects.get(pk=original.pk)
         data = PetOwnerSerializer(loaded).data
-        self.assertEqual(data["pet"], {"name": "Whiskers", "purrs": False})
+        self.assertEqual(
+            data["pet"],
+            {"_label": "rest_framework_tests.Cat", "name": "Whiskers", "purrs": False},
+        )
 
     def test_read_polymorphic_array_field_mixed_types(self):
         original = PetOwner.objects.create(
@@ -55,8 +61,14 @@ class PolymorphicEmbeddedModelSerializerReadTests(TestCase):
         data = PetOwnerSerializer(loaded).data
         self.assertIsNone(data["pet"])
         self.assertEqual(len(data["pets"]), 2)
-        self.assertEqual(data["pets"][0], {"name": "Rex", "barks": True})
-        self.assertEqual(data["pets"][1], {"name": "Luna", "purrs": True})
+        self.assertEqual(
+            data["pets"][0],
+            {"_label": "rest_framework_tests.Dog", "name": "Rex", "barks": True},
+        )
+        self.assertEqual(
+            data["pets"][1],
+            {"_label": "rest_framework_tests.Cat", "name": "Luna", "purrs": True},
+        )
 
     def test_read_polymorphic_fields_null(self):
         original = PetOwner.objects.create(name="Dave", pet=None, pets=None)
