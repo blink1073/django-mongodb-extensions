@@ -2,7 +2,7 @@ from django.db import models
 from django.test import SimpleTestCase, TestCase
 from rest_framework import serializers
 
-from django_mongodb_extensions.rest_framework import MongoModelSerializer
+from django_mongodb_extensions.rest_framework import MongoModelSerializer, ObjectIdField
 
 from .models import City, Continent, Country, Widget
 from .serializers import CitySerializer, ContinentSerializer
@@ -172,24 +172,24 @@ class FieldMappingPropagationTests(SimpleTestCase):
 
 class ObjectIdFieldMappingTests(SimpleTestCase):
     def test_object_id_auto_field_maps_to_object_id_field(self):
-        # ObjectIdAutoField maps to ObjectIdField (a CharField subclass) so
-        # ObjectId values round-trip as strings.
         class WidgetSerializer(MongoModelSerializer):
             class Meta:
                 model = Widget
                 fields = "__all__"
 
         fields = WidgetSerializer().get_fields()
+        self.assertIsInstance(fields["id"], ObjectIdField)
+        # ObjectIdField subclasses CharField.
         self.assertIsInstance(fields["id"], serializers.CharField)
 
-    def test_object_id_field_maps_to_char_field(self):
+    def test_object_id_field_maps_to_object_id_field(self):
         class WidgetSerializer(MongoModelSerializer):
             class Meta:
                 model = Widget
                 fields = "__all__"
 
         fields = WidgetSerializer().get_fields()
-        self.assertIsInstance(fields["ref"], serializers.CharField)
+        self.assertIsInstance(fields["ref"], ObjectIdField)
 
 
 class MongoModelSerializerCreateTests(TestCase):

@@ -2,9 +2,7 @@ from bson import ObjectId
 from django.test import SimpleTestCase
 from rest_framework import serializers
 
-from django_mongodb_extensions.rest_framework import MongoModelSerializer, ObjectIdField
-
-from .models import Widget
+from django_mongodb_extensions.rest_framework import ObjectIdField
 
 
 class ObjectIdFieldToRepresentationTests(SimpleTestCase):
@@ -49,22 +47,3 @@ class ObjectIdFieldToInternalValueTests(SimpleTestCase):
     def test_integer_rejected(self):
         with self.assertRaisesMessage(serializers.ValidationError, self.invalid_msg):
             self._field().to_internal_value(42)
-
-
-class ObjectIdFieldMappingTests(SimpleTestCase):
-    def _widget_fields(self):
-        class WidgetSerializer(MongoModelSerializer):
-            class Meta:
-                model = Widget
-                fields = "__all__"
-
-        return WidgetSerializer().get_fields()
-
-    def test_object_id_auto_field_maps_to_object_id_field(self):
-        self.assertIsInstance(self._widget_fields()["id"], ObjectIdField)
-
-    def test_object_id_field_maps_to_object_id_field(self):
-        self.assertIsInstance(self._widget_fields()["ref"], ObjectIdField)
-
-    def test_object_id_field_is_char_field_subclass(self):
-        self.assertIsInstance(self._widget_fields()["id"], serializers.CharField)

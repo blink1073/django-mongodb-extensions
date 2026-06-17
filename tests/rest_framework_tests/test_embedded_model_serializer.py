@@ -1,3 +1,4 @@
+from bson import ObjectId
 from django.core.exceptions import FieldDoesNotExist
 from django.test import SimpleTestCase
 from rest_framework import serializers
@@ -12,7 +13,7 @@ from .serializers import CitySerializer, CountrySerializer, StatusTagSerializer
 
 
 class EmbeddedModelSerializerToRepresentationTests(SimpleTestCase):
-    def test_basic(self):
+    def test_embedded_model_field(self):
         city = City(name="Paris", population=2_000_000)
         data = CitySerializer(city).data
         self.assertEqual(data, {"name": "Paris", "population": 2_000_000})
@@ -115,7 +116,7 @@ class EmbeddedModelSerializerToInternalValueTests(SimpleTestCase):
     def test_wrong_type_raises(self):
         s = CitySerializer(data={"name": "BadPop", "population": "not-a-number"})
         self.assertFalse(s.is_valid())
-        self.assertIn("population", s.errors)
+        self.assertEqual(s.errors["population"], ["A valid integer is required."])
 
     def test_null_embedded_field_accepted(self):
         data = {"name": "Nowhere", "capital": None, "cities": None, "languages": None}
@@ -230,11 +231,15 @@ class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
                 model = City
                 fields = ["id", "name"]
 
-        city = City(id=42, name="Berlin", population=3_500_000)
+        city = City(
+            id=ObjectId("000000000000000000000042"),
+            name="Berlin",
+            population=3_500_000,
+        )
         data = CityWithIdSerializer(city).data
         # ObjectIdAutoField maps to ObjectIdField (CharField subclass), coerced
         # to str.
-        self.assertEqual(data["id"], "42")
+        self.assertEqual(data["id"], "000000000000000000000042")
         self.assertEqual(data["name"], "Berlin")
 
 
@@ -246,7 +251,7 @@ class ChoicesCoercionTests(SimpleTestCase):
     def test_choices_field_rejects_invalid_value(self):
         s = StatusTagSerializer(data={"label": "test", "status": 99})
         self.assertFalse(s.is_valid())
-        self.assertIn("status", s.errors)
+        self.assertEqual(s.errors["status"], ['"99" is not a valid choice.'])
 
     def test_choices_field_accepts_valid_value(self):
         s = StatusTagSerializer(data={"label": "active", "status": 1})
