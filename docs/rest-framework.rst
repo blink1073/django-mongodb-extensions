@@ -5,17 +5,14 @@ Django REST Framework
 .. versionadded:: 0.3.0
 
 The classes in ``django_mongodb_extensions.rest_framework`` provide `Django
-REST Framework`_ (DRF) serializer support for :doc:`Django MongoDB Backend
-<django-mongodb-backend:index>` models.
+REST Framework <https://www.django-rest-framework.org/>`_ (DRF) serializer
+support for :doc:`Django MongoDB Backend <django-mongodb-backend:index>` models.
 
 All models using :class:`~django_mongodb_backend.fields.ObjectIdAutoField`
 (the default primary key for MongoDB models) need
 :class:`~django_mongodb_extensions.rest_framework.MongoModelSerializer` rather
 than DRF's ``ModelSerializer``, because the ``ObjectId`` primary key requires
 special handling.
-
-.. _Django REST Framework: https://www.django-rest-framework.org/
-.. _DRF serializers: https://www.django-rest-framework.org/api-guide/serializers/#specifying-which-fields-to-include
 
 Installation
 ============
@@ -68,7 +65,7 @@ generates the correct DRF fields for Django MongoDB Backend's fields:
 Use :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer`
 for each :class:`~django_mongodb_backend.models.EmbeddedModel` you want to
 serialize. Set ``Meta.model`` and ``Meta.fields`` just like other `DRF
-serializers`_::
+serializers <https://www.django-rest-framework.org/api-guide/serializers/#specifying-which-fields-to-include>`_::
 
     from django_mongodb_extensions.rest_framework import EmbeddedModelSerializer
 
@@ -89,9 +86,15 @@ that the result integrates with the Django MongoDB Backend ORM layer.
 Saving is not supported directly on ``EmbeddedModelSerializer`` — embedded
 models must be saved through their parent model.
 
-``EmbeddedModelSerializer`` implements its own ``get_fields()`` rather than
-delegating to ``ModelSerializer``, so the following ``Meta`` options are not
-yet implemented (contributions welcome):
+``EmbeddedModelSerializer`` extends ``Serializer`` rather than
+``ModelSerializer`` because :class:`~django_mongodb_backend.models.EmbeddedModel`
+instances have no independent database representation — they exist only as
+part of a parent document and cannot be queried or persisted on their own.
+``ModelSerializer``'s persistence assumptions don't apply, so the simpler
+``Serializer`` base is used and field generation is handled explicitly.
+
+As a result, the following ``Meta`` options are not yet implemented
+(contributions welcome):
 
 * ``Meta.exclude`` — use an explicit field list instead.
 * ``Meta.extra_kwargs`` — silently ignored; declare field overrides

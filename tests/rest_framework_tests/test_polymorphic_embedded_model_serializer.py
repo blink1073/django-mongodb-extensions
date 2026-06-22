@@ -7,6 +7,23 @@ from .models import Cat, Dog, PetOwner
 from .serializers import PetOwnerSerializer
 
 
+class PolymorphicEmbeddedModelSerializerReadOnlyTests(SimpleTestCase):
+    def test_to_internal_value_raises(self):
+        s = PolymorphicEmbeddedModelSerializer()
+        with self.assertRaises(NotImplementedError):
+            s.to_internal_value({})
+
+    def test_create_raises(self):
+        s = PolymorphicEmbeddedModelSerializer()
+        with self.assertRaises(NotImplementedError):
+            s.create({})
+
+    def test_update_raises(self):
+        s = PolymorphicEmbeddedModelSerializer()
+        with self.assertRaises(NotImplementedError):
+            s.update(None, {})
+
+
 class PolymorphicEmbeddedModelSerializerTests(SimpleTestCase):
     def test_polymorphic_field_is_read_only(self):
         fields = PetOwnerSerializer().get_fields()

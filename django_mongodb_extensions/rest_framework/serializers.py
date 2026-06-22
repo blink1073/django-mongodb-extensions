@@ -19,7 +19,6 @@ from rest_framework import serializers
 from rest_framework.fields import CharField, ChoiceField, Field
 from rest_framework.serializers import ALL_FIELDS, ModelField
 from rest_framework.utils.field_mapping import ClassLookupDict, get_field_kwargs
-from rest_framework.validators import UniqueValidator
 
 from .fields import ObjectIdField as ObjectIdSerializerField
 
@@ -141,12 +140,6 @@ def _get_serializer_field(
     # allow_blank is only valid for CharField and ChoiceField.
     if not issubclass(field_class, (CharField, ChoiceField)):
         field_kwargs.pop("allow_blank", None)
-    # EmbeddedModels cannot be queried; UniqueValidator would crash at
-    # is_valid() time.
-    if "validators" in field_kwargs:
-        field_kwargs["validators"] = [
-            v for v in field_kwargs["validators"] if not isinstance(v, UniqueValidator)
-        ]
     return field_class(**field_kwargs)
 
 
