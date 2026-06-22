@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import functools
 from typing import Any
 
@@ -22,29 +21,26 @@ from rest_framework.utils.field_mapping import ClassLookupDict, get_field_kwargs
 
 from .fields import ObjectIdField as ObjectIdSerializerField
 
-# Single source of truth for the MongoDB-extended field mapping.
-# EmbeddedModelSerializer uses this via _FIELD_MAPPING; MongoModelSerializer
-# inherits it directly as serializer_field_mapping, keeping both in sync.
 _MONGO_FIELD_MAPPING: dict[type, type] = {
     **serializers.ModelSerializer.serializer_field_mapping,
     ObjectIdAutoField: ObjectIdSerializerField,
     ObjectIdField: ObjectIdSerializerField,
 }
 
-# ClassLookupDict wrapper used by _get_serializer_field
-# (EmbeddedModelSerializer path).
+# ClassLookupDict wrapper used by _get_serializer_field for ArrayField
+# base_field lookups.
 _FIELD_MAPPING: ClassLookupDict = ClassLookupDict(_MONGO_FIELD_MAPPING)
 
 
 def _make_embedded_serializer(
     embedded_model: type[Any],
-    field_mapping: ClassLookupDict | None = None,
+    field_mapping: dict[type, type] | None = None,
 ) -> type[EmbeddedModelSerializer]:
     attrs: dict[str, Any] = {
         "Meta": type("Meta", (), {"model": embedded_model, "fields": ALL_FIELDS}),
     }
     if field_mapping is not None:
-        attrs["_field_mapping"] = field_mapping
+        attrs["serializer_field_mapping"] = field_mapping
     return type(
         f"{embedded_model.__name__}Serializer",
         (EmbeddedModelSerializer,),
@@ -65,7 +61,7 @@ def _cached_polymorphic_serializer(
 
 def _build_embedded_field(
     model_field: models.Field[Any, Any],
-    field_mapping: ClassLookupDict | None = None,
+    field_mapping: dict[type, type] | None = None,
 ) -> tuple[type[Any], dict[str, Any]] | None:
     """
     Return (field_class, kwargs) for MongoDB-specific fields, or None for
@@ -102,7 +98,7 @@ def _build_embedded_field(
         return field_cls, kwargs
 
     if isinstance(model_field, ArrayField):
-        child_field = _get_serializer_field(model_field.base_field, field_mapping)
+        child_field = _get_serializer_field(model_field.base_field)
         kwargs = {}
         if model_field.null:
             kwargs["allow_null"] = True
@@ -115,17 +111,15 @@ def _build_embedded_field(
 
 def _get_serializer_field(
     model_field: models.Field[Any, Any],
-    field_mapping: ClassLookupDict | None = None,
 ) -> Field[Any, Any, Any, Any] | None:
-    """Return a DRF field instance for model_field, or None to skip it."""
-    result = _build_embedded_field(model_field, field_mapping)
+    """Return a DRF field instance for an ArrayField's base_field, or None."""
+    result = _build_embedded_field(model_field)
     if result:
         field_cls, kwargs = result
         return field_cls(**kwargs)
 
-    mapping = field_mapping if field_mapping is not None else _FIELD_MAPPING
     try:
-        field_class: type[Field[Any, Any, Any, Any]] = mapping[model_field]
+        field_class: type[Field[Any, Any, Any, Any]] = _FIELD_MAPPING[model_field]
     except KeyError:
         return None
     field_kwargs: dict[str, Any] = get_field_kwargs(model_field.name, model_field)
@@ -177,97 +171,6 @@ class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
         raise NotImplementedError(f"{self.__class__.__name__} is read-only.")
 
 
-class EmbeddedModelSerializer(serializers.Serializer):
-    """
-    Serializer for EmbeddedModel instances.
-
-    Subclass and set ``Meta.model`` and ``Meta.fields``::
-
-        class AddressSerializer(EmbeddedModelSerializer):
-            class Meta:
-                model = Address
-                fields = '__all__'
-
-    ``EmbeddedModelSerializer`` auto-generates DRF fields from the embedded
-    model's field definitions, including nested ``EmbeddedModelField`` and
-    ``EmbeddedModelArrayField``. Explicitly declared fields on a subclass
-    take priority over auto-generated ones.
-    """
-
-    class Meta:
-        model: type[Any]
-        fields: list[str] | str
-
-    def get_fields(self) -> dict[str, Field[Any, Any, Any, Any]]:
-        assert hasattr(
-            self, "Meta"
-        ), f"Class {self.__class__.__name__} missing 'Meta' attribute."
-        meta = type(self).Meta
-        assert hasattr(
-            meta, "model"
-        ), f"Class {self.__class__.__name__}.Meta missing 'model' attribute."
-        assert hasattr(
-            meta, "fields"
-        ), f"Class {self.__class__.__name__}.Meta missing 'fields' attribute."
-
-        model: type[Any] = meta.model
-        all_fields_names = {f.name: f for f in model._meta.fields}
-
-        has_explicit_fields = meta.fields != ALL_FIELDS
-        field_names: list[str] | str = meta.fields
-        if field_names == ALL_FIELDS:
-            field_names = list(all_fields_names)
-        elif not isinstance(field_names, (list, tuple)):
-            raise AssertionError(
-                f"{self.__class__.__name__}.Meta.fields must be '__all__' or a list/tuple."
-            )
-
-        # Explicitly declared fields take priority over auto-generated ones.
-        # Deepcopy mirrors DRF's own get_fields(): field instances are mutated
-        # when bound (bind() sets field_name and parent), so each serializer
-        # instance needs its own copy to avoid cross-instance interference.
-        declared_fields = copy.deepcopy(self._declared_fields)
-        # A custom mapping may be set by _make_embedded_serializer on
-        # auto-generated classes.
-        field_mapping: ClassLookupDict | None = getattr(
-            type(self), "_field_mapping", None
-        )
-
-        result: dict[str, Field[Any, Any, Any, Any]] = {}
-        for name in field_names:
-            if name in declared_fields:
-                result[name] = declared_fields[name]
-                continue
-            model_field = all_fields_names.get(name)
-            if model_field is None:
-                raise FieldDoesNotExist(
-                    f"Field '{name}' not found on {model.__name__}."
-                )
-            # Skip the primary key when using __all__; otherwise, it can be
-            # included in a fields list.
-            if not has_explicit_fields and model_field.primary_key:
-                continue
-            drf_field = _get_serializer_field(model_field, field_mapping)
-            if drf_field:
-                result[name] = drf_field
-        return result
-
-    def to_internal_value(self, data: Any) -> Any:
-        validated: dict[str, Any] = super().to_internal_value(data)
-        meta = type(self).Meta
-        return meta.model(**validated)
-
-    def create(self, validated_data: Any) -> Any:
-        raise NotImplementedError(
-            "EmbeddedModel instances cannot be saved independently."
-        )
-
-    def update(self, instance: Any, validated_data: Any) -> Any:
-        raise NotImplementedError(
-            "EmbeddedModel instances cannot be updated independently."
-        )
-
-
 class MongoModelSerializer(serializers.ModelSerializer):
     """
     ``ModelSerializer`` with automatic support for MongoDB-specific fields.
@@ -309,11 +212,63 @@ class MongoModelSerializer(serializers.ModelSerializer):
         if not isinstance(model_field, models.Field):
             return super().build_field(field_name, info, model_class, nested_depth)
 
-        result = _build_embedded_field(
-            model_field,
-            ClassLookupDict(self.serializer_field_mapping),  # type: ignore[arg-type]
-        )
+        result = _build_embedded_field(model_field, self.serializer_field_mapping)
         if result:
             return result
 
         return super().build_field(field_name, info, model_class, nested_depth)
+
+
+class EmbeddedModelSerializer(MongoModelSerializer):
+    """
+    Serializer for EmbeddedModel instances.
+
+    Subclass and set ``Meta.model`` and ``Meta.fields``::
+
+        class AddressSerializer(EmbeddedModelSerializer):
+            class Meta:
+                model = Address
+                fields = '__all__'
+
+    ``EmbeddedModelSerializer`` auto-generates DRF fields from the embedded
+    model's field definitions, including nested ``EmbeddedModelField`` and
+    ``EmbeddedModelArrayField``. Explicitly declared fields on a subclass
+    take priority over auto-generated ones.
+    """
+
+    def get_field_names(
+        self,
+        declared_fields: Any,
+        info: Any,
+    ) -> list[str]:
+        field_names = super().get_field_names(declared_fields, info)
+        # ModelSerializer includes the pk by default; exclude it when the
+        # caller used '__all__' since embedded models have no meaningful pk.
+        if getattr(self.Meta, "fields", None) == ALL_FIELDS:
+            pk_name = self.Meta.model._meta.pk.name
+            field_names = [f for f in field_names if f != pk_name]
+        return field_names
+
+    def get_uniqueness_extra_kwargs(
+        self,
+        field_names: Any,
+        declared_fields: Any,
+        extra_kwargs: Any,
+    ) -> tuple[Any, dict[str, Any]]:
+        # EmbeddedModels have no collection of their own; skip uniqueness
+        # validators that would try to query the database.
+        return extra_kwargs, {}
+
+    def to_internal_value(self, data: Any) -> Any:
+        validated: dict[str, Any] = super().to_internal_value(data)
+        return type(self).Meta.model(**validated)
+
+    def create(self, validated_data: Any) -> Any:
+        raise NotImplementedError(
+            "EmbeddedModel instances cannot be saved independently."
+        )
+
+    def update(self, instance: Any, validated_data: Any) -> Any:
+        raise NotImplementedError(
+            "EmbeddedModel instances cannot be updated independently."
+        )

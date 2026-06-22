@@ -86,21 +86,10 @@ that the result integrates with the Django MongoDB Backend ORM layer.
 Saving is not supported directly on ``EmbeddedModelSerializer`` — embedded
 models must be saved through their parent model.
 
-``EmbeddedModelSerializer`` extends ``Serializer`` rather than
-``ModelSerializer`` because :class:`~django_mongodb_backend.models.EmbeddedModel`
-instances have no independent database representation — they exist only as
-part of a parent document and cannot be queried or persisted on their own.
-``ModelSerializer``'s persistence assumptions don't apply, so the simpler
-``Serializer`` base is used and field generation is handled explicitly.
-
-As a result, the following ``Meta`` options are not yet implemented
-(contributions welcome):
-
-* ``Meta.exclude`` — use an explicit field list instead.
-* ``Meta.extra_kwargs`` — silently ignored; declare field overrides
-  explicitly on the serializer class.
-* ``Meta.read_only_fields`` — silently ignored for the same reason; use an
-  explicit field declaration with ``read_only=True`` instead.
+``EmbeddedModelSerializer`` extends
+:class:`~django_mongodb_extensions.rest_framework.MongoModelSerializer` and
+supports the standard ``Meta`` options: ``fields``, ``exclude``,
+``extra_kwargs``, and ``read_only_fields``.
 
 Examples
 ========

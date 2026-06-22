@@ -1,5 +1,5 @@
 from bson import ObjectId
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 from rest_framework import serializers
 
@@ -177,7 +177,7 @@ class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
 
         self.assertRaisesMessage(
             AssertionError,
-            "Class BrokenSerializer.Meta missing 'model' attribute.",
+            'Class BrokenSerializer missing "Meta.model" attribute',
             BrokenSerializer().get_fields,
         )
 
@@ -188,7 +188,7 @@ class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
 
         self.assertRaisesMessage(
             AssertionError,
-            "Class BrokenSerializer.Meta missing 'fields' attribute.",
+            "fields' attribute or the 'exclude' attribute",
             BrokenSerializer().get_fields,
         )
 
@@ -199,8 +199,8 @@ class EmbeddedModelSerializerMetaValidationTests(SimpleTestCase):
                 fields = ["name", "nonexistent_field"]
 
         self.assertRaisesMessage(
-            FieldDoesNotExist,
-            "Field 'nonexistent_field' not found on City.",
+            ImproperlyConfigured,
+            "Field name `nonexistent_field` is not valid for model `City`",
             BrokenSerializer().get_fields,
         )
 
@@ -313,3 +313,35 @@ class DeclaredFieldOverrideTests(SimpleTestCase):
         s = CityWithFloatPop(data={"name": "Berlin", "population": "1.5e6"})
         self.assertTrue(s.is_valid(), s.errors)
         self.assertIsInstance(s.validated_data.population, float)
+
+
+class MetaOptionsTests(SimpleTestCase):
+    def test_exclude(self):
+        class CitySerializer(EmbeddedModelSerializer):
+            class Meta:
+                model = City
+                exclude = ["population"]
+
+        fields = CitySerializer().get_fields()
+        self.assertIn("name", fields)
+        self.assertNotIn("population", fields)
+
+    def test_extra_kwargs(self):
+        class CitySerializer(EmbeddedModelSerializer):
+            class Meta:
+                model = City
+                fields = "__all__"
+                extra_kwargs = {"name": {"required": False}}
+
+        s = CitySerializer(data={"population": 1_000_000})
+        self.assertTrue(s.is_valid(), s.errors)
+
+    def test_read_only_fields(self):
+        class CitySerializer(EmbeddedModelSerializer):
+            class Meta:
+                model = City
+                fields = "__all__"
+                read_only_fields = ["name"]
+
+        fields = CitySerializer().get_fields()
+        self.assertTrue(fields["name"].read_only)
