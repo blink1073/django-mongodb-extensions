@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 from typing import Any
 
-from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django_mongodb_backend.fields import (
     ArrayField,
@@ -15,9 +14,7 @@ from django_mongodb_backend.fields import (
     PolymorphicEmbeddedModelField,
 )
 from rest_framework import serializers
-from rest_framework.fields import CharField, ChoiceField, Field
-from rest_framework.serializers import ALL_FIELDS, ModelField
-from rest_framework.utils.field_mapping import ClassLookupDict, get_field_kwargs
+from rest_framework.serializers import ALL_FIELDS
 
 from .fields import ObjectIdField as ObjectIdSerializerField
 
@@ -26,10 +23,6 @@ _MONGO_FIELD_MAPPING: dict[type, type] = {
     ObjectIdAutoField: ObjectIdSerializerField,
     ObjectIdField: ObjectIdSerializerField,
 }
-
-# ClassLookupDict wrapper used by _get_serializer_field for ArrayField
-# base_field lookups.
-_FIELD_MAPPING: ClassLookupDict = ClassLookupDict(_MONGO_FIELD_MAPPING)
 
 
 def _make_embedded_serializer(
@@ -57,84 +50,6 @@ def _cached_polymorphic_serializer(
     embedded_model: type[Any],
 ) -> type[EmbeddedModelSerializer]:
     return _make_embedded_serializer(embedded_model)
-
-
-def _build_embedded_field(
-    model_field: models.Field[Any, Any],
-    field_mapping: dict[type, type] | None = None,
-) -> tuple[type[Any], dict[str, Any]] | None:
-    """
-    Return (field_class, kwargs) for MongoDB-specific fields, or None for
-    standard fields.
-    """
-    # PolymorphicEmbeddedModelArrayField before ArrayField — subclass check
-    # must come first.
-    if isinstance(model_field, PolymorphicEmbeddedModelArrayField):
-        kwargs: dict[str, Any] = {"many": True, "read_only": True}
-        if model_field.null:
-            kwargs["allow_null"] = True
-        return PolymorphicEmbeddedModelSerializer, kwargs
-
-    if isinstance(model_field, PolymorphicEmbeddedModelField):
-        kwargs = {"read_only": True}
-        if model_field.null:
-            kwargs["allow_null"] = True
-        return PolymorphicEmbeddedModelSerializer, kwargs
-
-    # EmbeddedModelArrayField before ArrayField — subclass check must come
-    # first.
-    if isinstance(model_field, EmbeddedModelArrayField):
-        child_cls = _make_embedded_serializer(model_field.embedded_model, field_mapping)
-        kwargs = {"many": True}
-        if model_field.null:
-            kwargs["allow_null"] = True
-        return child_cls, kwargs
-
-    if isinstance(model_field, EmbeddedModelField):
-        field_cls = _make_embedded_serializer(model_field.embedded_model, field_mapping)
-        kwargs = {}
-        if model_field.null:
-            kwargs["allow_null"] = True
-        return field_cls, kwargs
-
-    if isinstance(model_field, ArrayField):
-        child_field = _get_serializer_field(model_field.base_field)
-        kwargs = {}
-        if model_field.null:
-            kwargs["allow_null"] = True
-        if child_field:
-            kwargs["child"] = child_field
-        return serializers.ListField, kwargs
-
-    return None
-
-
-def _get_serializer_field(
-    model_field: models.Field[Any, Any],
-) -> Field[Any, Any, Any, Any] | None:
-    """Return a DRF field instance for an ArrayField's base_field, or None."""
-    result = _build_embedded_field(model_field)
-    if result:
-        field_cls, kwargs = result
-        return field_cls(**kwargs)
-
-    try:
-        field_class: type[Field[Any, Any, Any, Any]] = _FIELD_MAPPING[model_field]
-    except KeyError:
-        return None
-    field_kwargs: dict[str, Any] = get_field_kwargs(model_field.name, model_field)
-    # Coerce any field with choices to ChoiceField (mirrors DRF's
-    # build_standard_field).
-    if field_kwargs.get("choices"):
-        field_class = serializers.ChoiceField
-    # model_field is only valid for DRF's ModelField fallback; strip it for
-    # all others.
-    if not issubclass(field_class, ModelField):
-        field_kwargs.pop("model_field", None)
-    # allow_blank is only valid for CharField and ChoiceField.
-    if not issubclass(field_class, (CharField, ChoiceField)):
-        field_kwargs.pop("allow_blank", None)
-    return field_class(**field_kwargs)
 
 
 class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
@@ -197,26 +112,69 @@ class MongoModelSerializer(serializers.ModelSerializer):
 
     serializer_field_mapping = _MONGO_FIELD_MAPPING
 
-    def build_field(
+    def _build_field(
+        self,
+        model_field: models.Field[Any, Any],
+    ) -> tuple[type[Any], dict[str, Any]] | None:
+        """
+        Return (field_class, kwargs) for MongoDB-specific field types, or None
+        to fall through to DRF's standard field handling.
+        """
+        # PolymorphicEmbeddedModelArrayField before ArrayField — subclass check
+        # must come first.
+        if isinstance(model_field, PolymorphicEmbeddedModelArrayField):
+            kwargs: dict[str, Any] = {"many": True, "read_only": True}
+            if model_field.null:
+                kwargs["allow_null"] = True
+            return PolymorphicEmbeddedModelSerializer, kwargs
+
+        if isinstance(model_field, PolymorphicEmbeddedModelField):
+            kwargs = {"read_only": True}
+            if model_field.null:
+                kwargs["allow_null"] = True
+            return PolymorphicEmbeddedModelSerializer, kwargs
+
+        # EmbeddedModelArrayField before ArrayField — subclass check must come
+        # first.
+        if isinstance(model_field, EmbeddedModelArrayField):
+            child_cls = _make_embedded_serializer(
+                model_field.embedded_model, self.serializer_field_mapping
+            )
+            kwargs = {"many": True}
+            if model_field.null:
+                kwargs["allow_null"] = True
+            return child_cls, kwargs
+
+        if isinstance(model_field, EmbeddedModelField):
+            field_cls = _make_embedded_serializer(
+                model_field.embedded_model, self.serializer_field_mapping
+            )
+            kwargs = {}
+            if model_field.null:
+                kwargs["allow_null"] = True
+            return field_cls, kwargs
+
+        if isinstance(model_field, ArrayField):
+            child_class, child_kwargs = self.build_standard_field(
+                "child", model_field.base_field
+            )
+            kwargs = {}
+            if model_field.null:
+                kwargs["allow_null"] = True
+            kwargs["child"] = child_class(**child_kwargs)
+            return serializers.ListField, kwargs
+
+        return None
+
+    def build_standard_field(
         self,
         field_name: str,
-        info: Any,
-        model_class: type[models.Model],
-        nested_depth: int,
+        model_field: models.Field[Any, Any],
     ) -> tuple[type[Any], dict[str, Any]]:
-        try:
-            model_field = model_class._meta.get_field(field_name)
-        except FieldDoesNotExist:
-            return super().build_field(field_name, info, model_class, nested_depth)
-
-        if not isinstance(model_field, models.Field):
-            return super().build_field(field_name, info, model_class, nested_depth)
-
-        result = _build_embedded_field(model_field, self.serializer_field_mapping)
+        result = self._build_field(model_field)
         if result:
             return result
-
-        return super().build_field(field_name, info, model_class, nested_depth)
+        return super().build_standard_field(field_name, model_field)
 
 
 class EmbeddedModelSerializer(MongoModelSerializer):
