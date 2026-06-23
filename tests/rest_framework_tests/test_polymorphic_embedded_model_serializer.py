@@ -8,19 +8,21 @@ from .serializers import PetOwnerSerializer
 
 
 class PolymorphicEmbeddedModelSerializerReadOnlyTests(SimpleTestCase):
+    msg = "PolymorphicEmbeddedModelSerializer is read-only."
+
     def test_to_internal_value_raises(self):
         s = PolymorphicEmbeddedModelSerializer()
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaisesMessage(NotImplementedError, self.msg):
             s.to_internal_value({})
 
     def test_create_raises(self):
         s = PolymorphicEmbeddedModelSerializer()
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaisesMessage(NotImplementedError, self.msg):
             s.create({})
 
     def test_update_raises(self):
         s = PolymorphicEmbeddedModelSerializer()
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaisesMessage(NotImplementedError, self.msg):
             s.update(None, {})
 
 
