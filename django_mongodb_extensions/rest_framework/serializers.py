@@ -106,18 +106,16 @@ class MongoModelSerializer(serializers.ModelSerializer):
 
     serializer_field_mapping = _MONGO_FIELD_MAPPING
 
-    def _build_field(
+    def build_standard_field(
         self,
+        field_name: str,
         model_field: models.Field[Any, Any],
-    ) -> tuple[type[Any], dict[str, Any]] | None:
-        """
-        Return (field_class, kwargs) for MongoDB-specific field types, or None
-        to fall through to DRF's standard field handling.
-        """
+    ) -> tuple[type[Any], dict[str, Any]]:
+        kwargs: dict[str, Any]
         # PolymorphicEmbeddedModelArrayField before ArrayField — subclass check
         # must come first.
         if isinstance(model_field, PolymorphicEmbeddedModelArrayField):
-            kwargs: dict[str, Any] = {"many": True, "read_only": True}
+            kwargs = {"many": True, "read_only": True}
             if model_field.null:
                 kwargs["allow_null"] = True
             return PolymorphicEmbeddedModelSerializer, kwargs
@@ -160,16 +158,6 @@ class MongoModelSerializer(serializers.ModelSerializer):
             kwargs["child"] = child_class(**child_kwargs)
             return serializers.ListField, kwargs
 
-        return None
-
-    def build_standard_field(
-        self,
-        field_name: str,
-        model_field: models.Field[Any, Any],
-    ) -> tuple[type[Any], dict[str, Any]]:
-        result = self._build_field(model_field)
-        if result:
-            return result
         return super().build_standard_field(field_name, model_field)
 
 
