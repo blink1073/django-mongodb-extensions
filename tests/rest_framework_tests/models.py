@@ -56,3 +56,10 @@ class Continent(models.Model):
 class Widget(models.Model):
     name = models.CharField(max_length=100)
     ref = ObjectIdField(null=True, blank=True)
+    statuses = ArrayField(
+        models.IntegerField(choices=STATUS_CHOICES), null=True, blank=True
+    )
+
+
+class Event(models.Model):
+    tag = EmbeddedModelField(StatusTag, null=True, blank=True)

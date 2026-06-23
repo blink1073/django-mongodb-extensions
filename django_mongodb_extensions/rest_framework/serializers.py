@@ -25,31 +25,25 @@ _MONGO_FIELD_MAPPING: dict[type, type] = {
 }
 
 
+# Auto-generated serializer classes are stateless and safe to reuse across
+# requests. The cache is module-scoped and never cleared, which is acceptable
+# because both embedded model types and serializer_field_mapping dicts are
+# fixed at class-definition time and do not change at runtime.
+@functools.cache
 def _make_embedded_serializer(
     embedded_model: type[Any],
-    field_mapping: dict[type, type] | None = None,
+    field_mapping_items: frozenset[tuple[type, type]] | None = None,
 ) -> type[EmbeddedModelSerializer]:
     attrs: dict[str, Any] = {
         "Meta": type("Meta", (), {"model": embedded_model, "fields": ALL_FIELDS}),
     }
-    if field_mapping is not None:
-        attrs["serializer_field_mapping"] = field_mapping
+    if field_mapping_items is not None:
+        attrs["serializer_field_mapping"] = dict(field_mapping_items)
     return type(
         f"{embedded_model.__name__}Serializer",
         (EmbeddedModelSerializer,),
         attrs,
     )
-
-
-# Intentionally module-scoped: auto-generated serializer classes are
-# stateless and safe to reuse across requests. The cache is never cleared,
-# which is acceptable because concrete polymorphic types are fixed at import
-# time and do not change at runtime.
-@functools.cache
-def _cached_polymorphic_serializer(
-    embedded_model: type[Any],
-) -> type[EmbeddedModelSerializer]:
-    return _make_embedded_serializer(embedded_model)
 
 
 class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
@@ -71,7 +65,7 @@ class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
             return None
         concrete_type: type = type(instance)
         meta = concrete_type._meta
-        data = _cached_polymorphic_serializer(concrete_type)(
+        data = _make_embedded_serializer(concrete_type)(
             instance, context=self.context
         ).data
         return {"_label": f"{meta.app_label}.{meta.object_name}", **data}
@@ -138,7 +132,8 @@ class MongoModelSerializer(serializers.ModelSerializer):
         # first.
         if isinstance(model_field, EmbeddedModelArrayField):
             child_cls = _make_embedded_serializer(
-                model_field.embedded_model, self.serializer_field_mapping
+                model_field.embedded_model,
+                frozenset(self.serializer_field_mapping.items()),
             )
             kwargs = {"many": True}
             if model_field.null:
@@ -147,7 +142,8 @@ class MongoModelSerializer(serializers.ModelSerializer):
 
         if isinstance(model_field, EmbeddedModelField):
             field_cls = _make_embedded_serializer(
-                model_field.embedded_model, self.serializer_field_mapping
+                model_field.embedded_model,
+                frozenset(self.serializer_field_mapping.items()),
             )
             kwargs = {}
             if model_field.null:

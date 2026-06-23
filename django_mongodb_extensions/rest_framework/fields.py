@@ -17,6 +17,9 @@ class ObjectIdField(serializers.CharField):
         return str(value)
 
     def to_internal_value(self, data: Any) -> str:
+        # Returns str (not ObjectId) so the value is JSON-serializable and
+        # compatible with DRF's string-based field contract. Django MongoDB
+        # Backend accepts str values for ObjectId fields.
         value: str = super().to_internal_value(data)
         try:
             ObjectId(value)

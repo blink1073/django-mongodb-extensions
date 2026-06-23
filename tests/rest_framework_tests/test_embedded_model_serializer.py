@@ -8,7 +8,7 @@ from django_mongodb_extensions.rest_framework import (
     MongoModelSerializer,
 )
 
-from .models import City, Continent, Country
+from .models import City, Country, Event, Widget
 from .serializers import CitySerializer, CountrySerializer, StatusTagSerializer
 
 
@@ -259,20 +259,30 @@ class ChoicesCoercionTests(SimpleTestCase):
         self.assertEqual(s.validated_data.status, 1)
 
     def test_choices_field_on_mongo_serializer(self):
-        class HolderSerializer(MongoModelSerializer):
+        # MongoModelSerializer must propagate choices coercion into
+        # auto-generated EmbeddedModelSerializer instances for nested fields.
+        class EventSerializer(MongoModelSerializer):
             class Meta:
-                model = Continent  # has no choices — just confirm no crash
-                fields = "__all__"
+                model = Event
+                fields = ["tag"]
 
-        # A MongoModelSerializer auto-generating a StatusTag embedded field
-        # should also coerce choices. Test via a wrapping model using
-        # EmbeddedModelSerializer.
-        fields = StatusTagSerializer().get_fields()
-        self.assertIsInstance(fields["status"], serializers.ChoiceField)
+        tag_fields = EventSerializer().get_fields()["tag"].get_fields()
+        self.assertIsInstance(tag_fields["status"], serializers.ChoiceField)
         self.assertEqual(
-            dict(fields["status"].choices),
-            {1: "Active", 2: "Inactive"},
+            dict(tag_fields["status"].choices), {1: "Active", 2: "Inactive"}
         )
+
+    def test_choices_field_in_array_field(self):
+        # An ArrayField whose base_field has choices must produce a ListField
+        # with a ChoiceField child.
+        class WidgetSerializer(MongoModelSerializer):
+            class Meta:
+                model = Widget
+                fields = ["statuses"]
+
+        statuses_field = WidgetSerializer().get_fields()["statuses"]
+        self.assertIsInstance(statuses_field, serializers.ListField)
+        self.assertIsInstance(statuses_field.child, serializers.ChoiceField)
 
 
 class DeclaredFieldOverrideTests(SimpleTestCase):
