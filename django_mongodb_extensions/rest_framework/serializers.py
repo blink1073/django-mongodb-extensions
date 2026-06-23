@@ -25,77 +25,6 @@ _MONGO_FIELD_MAPPING: dict[type, type] = {
 }
 
 
-# Auto-generated serializer classes are stateless and safe to reuse across
-# requests. The cache is module-scoped and never cleared, which is acceptable
-# because both embedded model types and serializer_field_mapping dicts are
-# fixed at class-definition time and do not change at runtime.
-@functools.cache
-def _make_embedded_serializer(
-    embedded_model: type[Any],
-    field_mapping_items: frozenset[tuple[type, type]] | None = None,
-) -> type[EmbeddedModelSerializer]:
-    attrs: dict[str, Any] = {
-        "Meta": type("Meta", (), {"model": embedded_model, "fields": ALL_FIELDS}),
-    }
-    if field_mapping_items is not None:
-        attrs["serializer_field_mapping"] = dict(field_mapping_items)
-    return type(
-        f"{embedded_model.__name__}Serializer",
-        (EmbeddedModelSerializer,),
-        attrs,
-    )
-
-
-class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
-    """
-    Read-only serializer for
-    :class:`~django_mongodb_backend.fields.PolymorphicEmbeddedModelField`
-    values.
-
-    Serializes each instance using an auto-generated
-    :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer`
-    for its concrete type. A ``_label`` key (e.g. ``"myapp.Dog"``) is
-    included in the output so consumers can identify the concrete type.
-    Write operations are not supported because
-    ``PolymorphicEmbeddedModelField`` is not editable.
-    """
-
-    # Set by _make_polymorphic_serializer to propagate a custom
-    # serializer_field_mapping from the parent MongoModelSerializer into the
-    # auto-generated concrete-type EmbeddedModelSerializers.
-    _field_mapping_items: frozenset[tuple[type, type]] | None = None
-
-    def to_representation(self, instance: Any) -> Any:
-        if instance is None:
-            return None
-        concrete_type: type = type(instance)
-        meta = concrete_type._meta
-        data = _make_embedded_serializer(
-            concrete_type, type(self)._field_mapping_items
-        )(instance, context=self.context).data
-        return {"_label": f"{meta.app_label}.{meta.object_name}", **data}
-
-    def to_internal_value(self, data: Any) -> Any:
-        raise NotImplementedError(f"{self.__class__.__name__} is read-only.")
-
-    def create(self, validated_data: Any) -> Any:
-        raise NotImplementedError(f"{self.__class__.__name__} is read-only.")
-
-    def update(self, instance: Any, validated_data: Any) -> Any:
-        raise NotImplementedError(f"{self.__class__.__name__} is read-only.")
-
-
-@functools.cache
-def _make_polymorphic_serializer(
-    field_mapping_items: frozenset[tuple[type, type]],
-) -> type[PolymorphicEmbeddedModelSerializer]:
-    return type(
-        "PolymorphicEmbeddedModelSerializer",
-        (PolymorphicEmbeddedModelSerializer,),
-        {"_field_mapping_items": field_mapping_items},
-    )
-
-
 class MongoModelSerializer(serializers.ModelSerializer):
     """
     ``ModelSerializer`` with automatic support for MongoDB-specific fields.
@@ -232,3 +161,74 @@ class EmbeddedModelSerializer(MongoModelSerializer):
         raise NotImplementedError(
             "EmbeddedModel instances cannot be updated independently."
         )
+
+
+class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
+    """
+    Read-only serializer for
+    :class:`~django_mongodb_backend.fields.PolymorphicEmbeddedModelField`
+    values.
+
+    Serialize each instance using an auto-generated
+    :class:`~django_mongodb_extensions.rest_framework.EmbeddedModelSerializer`
+    for its concrete type. A ``_label`` key (e.g. ``"myapp.Dog"``) is
+    included in the output so consumers can identify the concrete type.
+    Write operations are not supported because
+    ``PolymorphicEmbeddedModelField`` is not editable.
+    """
+
+    # Set by _make_polymorphic_serializer to propagate a custom
+    # serializer_field_mapping from the parent MongoModelSerializer into the
+    # auto-generated concrete-type EmbeddedModelSerializers.
+    _field_mapping_items: frozenset[tuple[type, type]] | None = None
+
+    def to_representation(self, instance: Any) -> Any:
+        if instance is None:
+            return None
+        concrete_type: type = type(instance)
+        meta = concrete_type._meta
+        data = _make_embedded_serializer(
+            concrete_type, type(self)._field_mapping_items
+        )(instance, context=self.context).data
+        return {"_label": f"{meta.app_label}.{meta.object_name}", **data}
+
+    def to_internal_value(self, data: Any) -> Any:
+        raise NotImplementedError(f"{self.__class__.__name__} is read-only.")
+
+    def create(self, validated_data: Any) -> Any:
+        raise NotImplementedError(f"{self.__class__.__name__} is read-only.")
+
+    def update(self, instance: Any, validated_data: Any) -> Any:
+        raise NotImplementedError(f"{self.__class__.__name__} is read-only.")
+
+
+# Auto-generated serializer classes are stateless and safe to reuse across
+# requests. The cache is module-scoped and never cleared, which is acceptable
+# because both embedded model types and serializer_field_mapping dicts are
+# fixed at class-definition time and do not change at runtime.
+@functools.cache
+def _make_embedded_serializer(
+    embedded_model: type[Any],
+    field_mapping_items: frozenset[tuple[type, type]] | None = None,
+) -> type[EmbeddedModelSerializer]:
+    attrs: dict[str, Any] = {
+        "Meta": type("Meta", (), {"model": embedded_model, "fields": ALL_FIELDS}),
+    }
+    if field_mapping_items is not None:
+        attrs["serializer_field_mapping"] = dict(field_mapping_items)
+    return type(
+        f"{embedded_model.__name__}Serializer",
+        (EmbeddedModelSerializer,),
+        attrs,
+    )
+
+
+@functools.cache
+def _make_polymorphic_serializer(
+    field_mapping_items: frozenset[tuple[type, type]],
+) -> type[PolymorphicEmbeddedModelSerializer]:
+    return type(
+        "PolymorphicEmbeddedModelSerializer",
+        (PolymorphicEmbeddedModelSerializer,),
+        {"_field_mapping_items": field_mapping_items},
+    )
