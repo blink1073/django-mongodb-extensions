@@ -60,14 +60,19 @@ class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
     ``PolymorphicEmbeddedModelField`` is not editable.
     """
 
+    # Set by _make_polymorphic_serializer to propagate a custom
+    # serializer_field_mapping from the parent MongoModelSerializer into the
+    # auto-generated concrete-type EmbeddedModelSerializers.
+    _field_mapping_items: frozenset[tuple[type, type]] | None = None
+
     def to_representation(self, instance: Any) -> Any:
         if instance is None:
             return None
         concrete_type: type = type(instance)
         meta = concrete_type._meta
-        data = _make_embedded_serializer(concrete_type)(
-            instance, context=self.context
-        ).data
+        data = _make_embedded_serializer(
+            concrete_type, type(self)._field_mapping_items
+        )(instance, context=self.context).data
         return {"_label": f"{meta.app_label}.{meta.object_name}", **data}
 
     def to_internal_value(self, data: Any) -> Any:
@@ -78,6 +83,17 @@ class PolymorphicEmbeddedModelSerializer(serializers.BaseSerializer):
 
     def update(self, instance: Any, validated_data: Any) -> Any:
         raise NotImplementedError(f"{self.__class__.__name__} is read-only.")
+
+
+@functools.cache
+def _make_polymorphic_serializer(
+    field_mapping_items: frozenset[tuple[type, type]],
+) -> type[PolymorphicEmbeddedModelSerializer]:
+    return type(
+        "PolymorphicEmbeddedModelSerializer",
+        (PolymorphicEmbeddedModelSerializer,),
+        {"_field_mapping_items": field_mapping_items},
+    )
 
 
 class MongoModelSerializer(serializers.ModelSerializer):
@@ -112,19 +128,21 @@ class MongoModelSerializer(serializers.ModelSerializer):
         model_field: models.Field[Any, Any],
     ) -> tuple[type[Any], dict[str, Any]]:
         kwargs: dict[str, Any]
+        field_mapping_items = frozenset(self.serializer_field_mapping.items())
+        poly_cls = _make_polymorphic_serializer(field_mapping_items)
         # PolymorphicEmbeddedModelArrayField before ArrayField — subclass check
         # must come first.
         if isinstance(model_field, PolymorphicEmbeddedModelArrayField):
             kwargs = {"many": True, "read_only": True}
             if model_field.null:
                 kwargs["allow_null"] = True
-            return PolymorphicEmbeddedModelSerializer, kwargs
+            return poly_cls, kwargs
 
         if isinstance(model_field, PolymorphicEmbeddedModelField):
             kwargs = {"read_only": True}
             if model_field.null:
                 kwargs["allow_null"] = True
-            return PolymorphicEmbeddedModelSerializer, kwargs
+            return poly_cls, kwargs
 
         # EmbeddedModelArrayField before ArrayField — subclass check must come
         # first.

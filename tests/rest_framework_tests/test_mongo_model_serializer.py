@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from django_mongodb_extensions.rest_framework import MongoModelSerializer, ObjectIdField
 
-from .models import City, Continent, Country, Widget
+from .models import City, Continent, Country, Dog, PetOwner, Widget
 from .serializers import CitySerializer, ContinentSerializer
 
 
@@ -168,6 +168,23 @@ class FieldMappingPropagationTests(SimpleTestCase):
         base_fields = ContinentSerializer().get_fields()
         capital_fields = base_fields["country"].get_fields()["capital"].get_fields()
         self.assertIsInstance(capital_fields["population"], serializers.IntegerField)
+
+    def test_custom_mapping_applies_to_polymorphic_field(self):
+        class CustomPetOwnerSerializer(MongoModelSerializer):
+            serializer_field_mapping = {
+                **MongoModelSerializer.serializer_field_mapping,
+                models.BooleanField: serializers.CharField,
+            }
+
+            class Meta:
+                model = PetOwner
+                fields = ["pet"]
+
+        pet_field = CustomPetOwnerSerializer().get_fields()["pet"]
+        dog = Dog(name="Rex", barks=True)
+        data = pet_field.to_representation(dog)
+        # With BooleanField → CharField mapping, barks is serialized as a string.
+        self.assertIsInstance(data["barks"], str)
 
 
 class ObjectIdFieldMappingTests(SimpleTestCase):
